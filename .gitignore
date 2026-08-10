@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Next.js build output
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# Local env files
+.env*.local
+frontend/.env*.local
+frontend/.env.local
+
+# Temporary files
+~$*.docx
+*.log
+.clasp.json
+
+# Backup files
+backupKode.js
