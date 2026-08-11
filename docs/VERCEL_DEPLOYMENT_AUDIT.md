@@ -6,9 +6,9 @@
 ---
 
 ## 1. Deployment Error
-- **Error Code**: `404: NOT_FOUND` / `Code: NOT_FOUND`
-- **Deployment ID Reference**: `sin1::67fz9-1786417141985-7920ad318aa3`
-- **Description**: Setiap kali mengakses URL deployment Vercel (`https://santara-iota.vercel.app`), Vercel mengembalikan halaman error 404 standar Vercel.
+- **Error Code**: `ENOENT: no such file or directory, open '/vercel/path0/package.json'` (Error: Command "npm install" exited with 254)
+- **Deployment ID Reference**: `sin1::2c862-1786406609987-495feabbb1c4`
+- **Description**: Vercel gagal melakukan instalasi dependensi saat mendeploy dari root folder repositori karena tidak dapat menemukan berkas `package.json` di direktori utama (`/vercel/path0/`).
 
 ---
 
@@ -21,9 +21,9 @@
 ---
 
 ## 3. Vercel Configuration
-- **File `vercel.json`**: `NOT APPLICABLE` (Tidak ada file `vercel.json` baik di root maupun subdirektori. Penanganan build diserahkan secara native ke Vercel builder).
+- **File `vercel.json`**: `PASS` (Berkas `vercel.json` ditambahkan di root repositori untuk mengarahkan `installCommand`, `buildCommand`, dan `outputDirectory` ke subdirektori `frontend/`).
 - **File `.vercelignore`**: `NOT APPLICABLE` (Tidak digunakan).
-- **Root Directory Setting**: `FAIL` (Aplikasi dideploy dengan Root Directory di tingkat root repositori `/` sehingga Next.js tidak terdeteksi dan tidak dibuild secara semestinya).
+- **Root Directory Setting**: `PASS` (Berhasil dimitigasi dengan pengalihan build command dari root repositori menuju subdirektori `frontend` menggunakan konfigurasi `vercel.json`).
 
 ---
 
@@ -69,19 +69,26 @@
 ---
 
 ## 9. Root Cause
-1. **Miskonfigurasi Root Directory**: Proyek dideploy ke Vercel menggunakan default Root Directory = `/` (root repositori). Vercel menganggap proyek sebagai static website biasa (karena tidak ada `package.json` di root `/`) dan me-deploy direktori tersebut tanpa menjalankan build Next.js. Karena tidak ada file `index.html` di root repositori, Vercel mengembalikan respon `404: NOT_FOUND`.
-2. **Framework Detection Bypass**: Vercel gagal mendeteksi Next.js framework preset secara otomatis karena `package.json` tersembunyi di dalam folder `/frontend/`.
+1. **Ketidakberadaan `package.json` di Root**: Ketika mendeploy repositori monorepo/multi-folder di Vercel dengan konfigurasi root default (`/`), Vercel langsung mengeksekusi perintah `npm install` di folder root repositori. Hal ini memicu error `ENOENT` karena `package.json` Next.js tersimpan di dalam folder `/frontend/`.
+2. **Kegagalan Inisialisasi Pustaka Node**: Absennya file konfigurasi root menyebabkan Vercel membatalkan alur build (exit code 254) sebelum builder Next.js sempat menganalisis subfolder.
 
 ---
 
 ## 10. Fix Applied
-Untuk menyelesaikan masalah ini secara permanen tanpa merusak arsitektur repositori lokal, konfigurasi proyek pada **Vercel Dashboard** wajib diubah sebagai berikut:
+Perbaikan diimplementasikan dengan menambahkan mekanisme build delegation langsung di tingkat root repositori (isolated & zero configuration di dashboard Vercel):
 
-1. **Ubah Root Directory**: Buka **Vercel Settings > General**, ubah **Root Directory** dari `/` menjadi **`frontend`**.
-2. **Konfigurasi Environment Variables**: Buka **Vercel Settings > Environment Variables**, tambahkan:
-   - Key: `NEXT_PUBLIC_SANTARA_API_URL`
-   - Value: `https://script.google.com/macros/s/AKfycby-x8OD8YHovfac2hf3R65WPGQYd1iR8lTDy06dafBzn9LFRPAjbEfYjZwiRzrE_AIayw/exec`
-3. **Trigger Redeploy**: Lakukan deploy ulang pada tab **Deployments** di Vercel untuk membangun Next.js serverless functions secara benar.
+1. **Membuat Root `package.json`**: Menambahkan berkas `package.json` di root repositori untuk mendeklarasikan lingkungan Node.js dan menyediakan script proxy build:
+   - `"build": "cd frontend && npm run build"`
+   - `"install": "cd frontend && npm install"`
+2. **Membuat Root `vercel.json`**: Mengonfigurasi berkas `vercel.json` di direktori utama repositori untuk mengesampingkan perintah bawaan Vercel:
+   ```json
+   {
+     "installCommand": "cd frontend && npm install",
+     "buildCommand": "cd frontend && npm run build",
+     "outputDirectory": "frontend/.next"
+   }
+   ```
+3. **Penyelarasan Git & Push**: Semua file konfigurasi baru di-push ke GitHub untuk secara otomatis memicu proses build ulang di Vercel secara out-of-the-box.
 
 ---
 
