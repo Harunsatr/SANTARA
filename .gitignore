@@ -19,3 +19,5 @@ frontend/.env.local
 
 # Backup files
 backupKode.js
+
+.vercel
