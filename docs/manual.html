@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Panduan Penggunaan Website SANTARA</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+    
+    @page {
+      size: A4;
+      margin: 2.5cm 2cm;
+    }
+    
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      color: #1e293b;
+      line-height: 1.6;
+      font-size: 11pt;
+      margin: 0;
+      padding: 0;
+    }
+    
+    /* Cover Page */
+    .cover {
+      page-break-after: always;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+      padding: 2cm;
+      box-sizing: border-box;
+      border: 2px solid #e2e8f0;
+      border-radius: 24px;
+      background: radial-gradient(circle at 10% 20%, rgba(243, 244, 246, 0.5) 0%, rgba(255, 255, 255, 1) 90%);
+    }
+    
+    .cover-icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 36pt;
+      font-weight: 900;
+      margin-bottom: 2rem;
+      box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.3);
+    }
+    
+    .cover-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28pt;
+      font-weight: 900;
+      color: #0f172a;
+      margin: 0;
+      line-height: 1.2;
+      letter-spacing: -0.05em;
+    }
+    
+    .cover-subtitle {
+      font-size: 14pt;
+      color: #64748b;
+      margin: 1rem 0 3rem 0;
+      font-weight: 500;
+    }
+    
+    .cover-meta {
+      margin-top: auto;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 2rem;
+      width: 100%;
+      display: grid;
+      grid-template-cols: 1fr 1fr;
+      gap: 1rem;
+      text-align: left;
+    }
+    
+    .meta-item {
+      font-size: 9.5pt;
+      color: #475569;
+    }
+    
+    .meta-item strong {
+      color: #0f172a;
+      display: block;
+      font-size: 10.5pt;
+    }
+    
+    /* Layout Elements */
+    h1 {
+      page-break-before: always;
+      font-family: 'Outfit', sans-serif;
+      color: #0f172a;
+      font-size: 20pt;
+      font-weight: 800;
+      border-bottom: 2px solid #f1f5f9;
+      padding-bottom: 0.5rem;
+      margin-top: 0;
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.03em;
+    }
+    
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      color: #0284c7;
+      font-size: 14pt;
+      font-weight: 700;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+    
+    h3 {
+      font-size: 11.5pt;
+      color: #1e293b;
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+    }
+    
+    p {
+      margin-top: 0;
+      margin-bottom: 1rem;
+      text-align: justify;
+      color: #334155;
+    }
+    
+    ul, ol {
+      margin-top: 0;
+      margin-bottom: 1rem;
+      padding-left: 1.5rem;
+      color: #334155;
+    }
+    
+    li {
+      margin-bottom: 0.5rem;
+    }
+    
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      font-size: 9.5pt;
+    }
+    
+    th {
+      background-color: #f8fafc;
+      color: #0f172a;
+      font-weight: 700;
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 2px solid #cbd5e1;
+    }
+    
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #475569;
+      vertical-align: top;
+    }
+    
+    tr:nth-child(even) {
+      background-color: #f8fafc/50;
+    }
+    
+    code {
+      font-family: 'Courier New', Courier, monospace;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 9pt;
+      border: 1px solid #e2e8f0;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .badge-admin { background-color: #ffe4e6; color: #9f1239; }
+    .badge-guru { background-color: #e0f2fe; color: #075985; }
+    .badge-siswa { background-color: #d1fae5; color: #065f46; }
+    
+    /* Box Callouts */
+    .callout {
+      padding: 1rem 1.25rem;
+      border-radius: 16px;
+      margin: 1.5rem 0;
+      font-size: 10pt;
+      border: 1px solid transparent;
+    }
+    
+    .callout-info {
+      background-color: #f0f9ff;
+      border-color: #bae6fd;
+      color: #0369a1;
+    }
+    
+    .callout-warning {
+      background-color: #fffbeb;
+      border-color: #fde68a;
+      color: #b45309;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- COVER PAGE -->
+  <div class="cover">
+    <div class="cover-icon">S</div>
+    <h1 class="cover-title">PANDUAN LENGKAP PENGGUNAAN WEBSITE SANTARA</h1>
+    <p class="cover-subtitle">Sistem Pemantauan Kesehatan Remaja SMA Terintegrasi</p>
+    
+    <div class="cover-meta">
+      <div class="meta-item">
+        <strong>Nama Aplikasi</strong>
+        SANTARA (Sistem Kesehatan Remaja)
+      </div>
+      <div class="meta-item">
+        <strong>Versi Sistem</strong>
+        v2.0 (Stable Production Build)
+      </div>
+      <div class="meta-item">
+        <strong>Database Cloud</strong>
+        Google Sheets & Google Apps Script
+      </div>
+      <div class="meta-item">
+        <strong>Tanggal Terbit</strong>
+        12 Agustus 2026
+      </div>
+    </div>
+  </div>
+
+  <!-- DAFTAR ISI -->
+  <div>
+    <h1 style="page-break-before: avoid;">Daftar Isi</h1>
+    <ol style="font-size: 12pt; line-height: 2;">
+      <li><strong>Bab 1: Pendahuluan & Arsitektur Sistem</strong></li>
+      <li><strong>Bab 2: Panduan Akses Halaman & Fitur Aplikasi</strong>
+        <ul>
+          <li>Menu Publik (Tanpa Sesi)</li>
+          <li>Portal Pendaftaran & ID Login</li>
+          <li>Dashboard Kader (ADMIN & GURU)</li>
+          <li>Modul Layanan Kesehatan (Pemeriksaan Gizi, Skrining, TTD)</li>
+          <li>Modul Pengelolaan Edukasi & Akun</li>
+          <li>Dashboard Pribadi Siswa</li>
+        </ul>
+      </li>
+      <li><strong>Bab 3: Arsitektur Basis Data Google Sheets</strong>
+        <ul>
+          <li>Cara Mengakses Database Live</li>
+          <li>Fungsi & Kegunaan Tabel (01_USERS s/d 09_AUDIT_LOG)</li>
+          <li>Deskripsi & Aturan Setiap Kolom Tabel</li>
+        </ul>
+      </li>
+    </ol>
+  </div>
+
+  <!-- BAB 1: PENDAHULUAN -->
+  <h1>Bab 1: Pendahuluan & Arsitektur Sistem</h1>
+  <p>
+    <strong>SANTARA</strong> adalah aplikasi pemantauan kesehatan remaja SMA terintegrasi. Fokus utama sistem ini adalah pemantauan status gizi (antropometri), skrining kesehatan (kadar Hb anemia & tekanan darah), serta kepatuhan konsumsi Tablet Tambah Darah (TTD) pada siswa perempuan untuk mencegah anemia sejak dini.
+  </p>
+  
+  <h2>1.1 Hak Akses Role (RBAC)</h2>
+  <p>
+    Sistem menerapkan pembatasan akses berbasis peran (Role-Based Access Control) yang terbagi menjadi tiga tingkatan resmi:
+  </p>
+  <ul>
+    <li><span class="badge badge-admin">ADMIN</span>: Memiliki kontrol penuh atas data murid, entri kesehatan, artikel edukasi, serta akses ke menu manajemen akun pengguna sistem (01_USERS).</li>
+    <li><span class="badge badge-guru">GURU</span>: Guru Kesehatan atau Petugas UKS. Berhak mencatat pemeriksaan gizi, skrining Hb/tensi, log konsumsi TTD, serta mengelola artikel edukasi kesehatan.</li>
+    <li><span class="badge badge-siswa">SISWA</span>: Murid terdaftar. Hanya dapat mengakses dashboard pribadinya untuk melihat rekam medis kesehatan pribadi secara aman tanpa dapat melihat data murid lain.</li>
+  </ul>
+
+  <h2>1.2 Arsitektur Data Terintegrasi</h2>
+  <p>
+    Aplikasi ini dibangun menggunakan arsitektur serverless modern:
+  </p>
+  <ol>
+    <li><strong>Frontend (Next.js App Router)</strong>: Dibangun dengan visualisasi data grafik responsif, route guard berlapis tingkat folder untuk mencegah bypass URL, dan antarmuka premium berbasis Tailwind CSS.</li>
+    <li><strong>Backend API (Google Apps Script)</strong>: Berperan sebagai API Router yang menerima request RESTful (GET & POST) dari frontend.</li>
+    <li><strong>Database (Google Sheets)</strong>: Bertindak sebagai database cloud utama. Setiap penulisan/pembaruan data dari website akan disinkronisasikan langsung dalam hitungan milidetik secara real-time ke lembar spreadsheet.</li>
+  </ol>
+
+  <!-- BAB 2: PANDUAN AKSES HALAMAN -->
+  <h1>Bab 2: Panduan Akses Halaman & Fitur Aplikasi</h1>
+  
+  <h2>2.1 Menu Publik (Tanpa Sesi)</h2>
+  <p>
+    Ketika pengguna membuka situs utama, terdapat 3 halaman yang dapat diakses secara bebas tanpa perlu melakukan login:
+  </p>
+  <ul>
+    <li><strong>Beranda Utama (<code>/</code>)</strong>: Menampilkan navigasi publik, deskripsi layanan SANTARA, statistik ringkas, dan tautan masuk ke aplikasi.</li>
+    <li><strong>Materi Edukasi (<code>/edukasi</code>)</strong>: Berisi pustaka artikel tips gizi, pencegahan anemia, dan panduan pola makan sehat bagi remaja yang ditulis oleh guru kesehatan.</li>
+    <li><strong>Grafik Sekolah (<code>/grafik</code>)</strong>: Menyajikan diagram visual persentase status gizi siswa (Normal, Obesitas, dll.) di sekolah-sekolah terdaftar secara agregat guna menjaga kerahasiaan data pribadi.</li>
+  </ul>
+
+  <h2>2.2 Portal Login & Pendaftaran Siswa Baru (<code>/login</code>)</h2>
+  <p>
+    Sistem login didesain aman dengan menyembunyikan pilihan akun secara visual. Pengguna dapat masuk melalui dua tab utama:
+  </p>
+  
+  <h3>A. Form Masuk Akun</h3>
+  <ul>
+    <li>Pengguna memasukkan <strong>ID Pengguna</strong> atau <strong>Kode Siswa</strong> secara manual (contoh: <code>USR001</code> untuk Admin, <code>USR003</code> untuk Guru, atau <code>STD001</code>/<code>12345</code> untuk Siswa).</li>
+    <li>Terdapat tombol <strong>"Masuk untuk Umum (Role Siswa)"</strong> yang akan mengarahkan pengguna secara otomatis ke portal siswa menggunakan akun demonstrasi umum jika siswa belum memiliki Kode unik.</li>
+  </ul>
+
+  <h3>B. Form Pendaftaran Siswa Baru</h3>
+  <p>
+    Siswa baru dapat mendaftarkan diri secara mandiri dengan mengisi:
+  </p>
+  <ul>
+    <li>Nama Lengkap & Jenis Kelamin (Laki-laki / Perempuan).</li>
+    <li>Asal Sekolah & Kelas (Dropdown dinamis yang memfilter kelas berdasarkan sekolah yang dipilih).</li>
+    <li>Kode Siswa / NISN (Digunakan sebagai kata sandi login di masa mendatang) & Tanggal Lahir.</li>
+  </ul>
+  <div class="callout callout-info">
+    <strong>Info Sinkronisasi:</strong> Saat pendaftaran diklik, sistem akan langsung mengirim data ke Google Sheets, membuat ID baru secara otomatis (misal: <code>STD016</code>), dan otomatis membawa siswa masuk ke dashboard pribadinya tanpa bug.
+  </div>
+
+  <h2>2.3 Dashboard Kader (ADMIN & GURU) (<code>/kader/dashboard</code>)</h2>
+  <p>
+    Dashboard ini adalah panel utama untuk guru dan administrator. Halaman ini berisi ringkasan cepat jumlah siswa, grafik sebaran status gizi, total skrining anemia, serta tautan cepat ke modul tindakan kesehatan.
+  </p>
+
+  <h2>2.4 Modul Layanan Kesehatan (Kader)</h2>
+  
+  <h3>A. Data Siswa (<code>/kader/data-siswa</code>)</h3>
+  <p>
+    Pusat data siswa. Guru dan admin dapat mencari murid, menyaring berdasarkan sekolah dan kelas, serta menambahkan data siswa baru secara langsung.
+  </p>
+
+  <h3>B. Pemeriksaan Gizi (<code>/kader/status-gizi</code>)</h3>
+  <p>
+    Digunakan untuk mencatat berat badan (kg) dan tinggi badan (cm) siswa. Sistem akan otomatis menghitung nilai IMT (Indeks Massa Tubuh) secara real-time dan mengklasifikasikannya ke dalam status: <em>Normal, Overweight, Obese, Thinness, atau Severely Thinness</em> sesuai standar WHO.
+  </p>
+
+  <h3>C. Skrining Kesehatan (<code>/kader/skrining</code>)</h3>
+  <p>
+    Modul untuk mencatat pemeriksaan kadar Hemoglobin (Hb) anemia siswa perempuan (dalam g/dL) dan tekanan darah. Hasil skrining Hb akan dikategorikan secara otomatis menjadi Anemia atau Normal.
+  </p>
+
+  <h3>D. Kepatuhan TTD (<code>/kader/ttd</code>)</h3>
+  <p>
+    Digunakan untuk mencatat konsumsi mingguan Tablet Tambah Darah (TTD). Menampilkan daftar centang (checkbox) kehadiran konsumsi TTD mingguan per kelas yang sangat praktis bagi guru kesehatan.
+  </p>
+
+  <h2>2.5 Modul Manajemen Pengguna & Edukasi</h2>
+  <ul>
+    <li><strong>Kelola Edukasi (<code>/kader/edukasi-kelola</code>)</strong>: Fitur CRUD untuk menambah, mengedit, mempublikasikan, atau menghapus artikel kesehatan gizi.</li>
+    <li><strong>Manajemen Pengguna (<code>/admin/users</code>)</strong>: Eksklusif untuk ADMIN. Berisi daftar pengguna yang berhak mengedit data kesehatan (01_USERS). Demi alasan keamanan, perubahan role/password dikunci secara aman (read-only) di frontend untuk mencegah manipulasi.</li>
+  </ul>
+
+  <h2>2.6 Dashboard Pribadi Siswa (<code>/siswa/dashboard</code>)</h2>
+  <p>
+    Halaman khusus siswa yang terproteksi ketat. Ketika siswa login menggunakan Kodenya, sistem membatasi (mengisolasi) tampilan hanya untuk datanya sendiri. Siswa dapat melihat grafik perkembangan tinggi/berat badan dari waktu ke waktu, riwayat kadar Hb anemia, serta status kepatuhan minum TTD pribadinya secara interaktif.
+  </p>
+
+  <!-- BAB 3: ARSITEKTUR DATABASE GOOGLE SHEETS -->
+  <h1>Bab 3: Arsitektur Basis Data Google Sheets</h1>
+  
+  <h2>3.1 Cara Mengakses Database Live</h2>
+  <p>
+    Database utama SANTARA disimpan dalam lembar kerja Google Sheets dengan ID Dokumen: <code>SANTARA_DATABASE</code>. 
+    Anda dapat mengakses spreadsheet tersebut menggunakan akun Google yang terdaftar dengan hak edit melalui link kolaborasi internal atau drive folder admin.
+  </p>
+
+  <h2>3.2 Kegunaan Tabel & Struktur Kolom</h2>
+  <p>
+    Berikut adalah kegunaan dari 9 tabel (sheet) utama yang saling berelasi di Google Sheets beserta detail fungsi kolomnya:
+  </p>
+
+  <!-- SHEET 01_USERS -->
+  <h3>1. Tabel <code>01_USERS</code> (Daftar Pengguna Sistem/Kader)</h3>
+  <p>Menyimpan data staf (Administrator dan Guru Kesehatan) yang memiliki hak akses menulis dan mengedit data kesehatan.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Nama Kolom</th>
+        <th>Tipe Data</th>
+        <th>Deskripsi / Kegunaan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>id</code></td>
+        <td>String (Primary Key)</td>
+        <td>ID Unik Pengguna dengan prefix <code>USR</code> (contoh: <code>USR001</code>).</td>
+      </tr>
+      <tr>
+        <td><code>name</code></td>
+        <td>String</td>
+        <td>Nama lengkap pengguna / guru kesehatan.</td>
+      </tr>
+      <tr>
+        <td><code>email</code></td>
+        <td>String</td>
+        <td>Alamat email aktif (digunakan juga untuk login).</td>
+      </tr>
+      <tr>
+        <td><code>role</code></td>
+        <td>String</td>
+        <td>Hak akses peran pengguna: <code>ADMIN</code> atau <code>GURU</code>.</td>
+      </tr>
+      <tr>
+        <td><code>school_id</code></td>
+        <td>String (Foreign Key)</td>
+        <td>Berelasi dengan ID sekolah di sheet <code>02_SCHOOLS</code>.</td>
+      </tr>
+      <tr>
+        <td><code>class_id</code></td>
+        <td>String (Foreign Key)</td>
+        <td>Berelasi dengan ID kelas di sheet <code>03_CLASSES</code> (opsional).</td>
+      </tr>
+      <tr>
+        <td><code>status</code></td>
+        <td>String</td>
+        <td>Status aktif akun: <code>active</code> atau <code>inactive</code>.</td>
+      </tr>
+      <tr>
+        <td><code>created_at</code></td>
+        <td>Timestamp ISO</td>
+        <td>Tanggal dan waktu akun dibuat.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SHEET 02_SCHOOLS -->
+  <h3>2. Tabel <code>02_SCHOOLS</code> (Master Data Sekolah)</h3>
+  <p>Menyimpan daftar sekolah SMA/sederajat yang bermitra dalam pemantauan kesehatan.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Nama Kolom</th>
+        <th>Tipe Data</th>
+        <th>Deskripsi / Kegunaan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>id</code></td>
+        <td>String (Primary Key)</td>
+        <td>ID Unik Sekolah dengan prefix <code>SCH</code> (contoh: <code>SCH001</code>).</td>
+      </tr>
+      <tr>
+        <td><code>name</code></td>
+        <td>String</td>
+        <td>Nama sekolah (contoh: SMA Negeri 1 Malang).</td>
+      </tr>
+      <tr>
+        <td><code>address</code></td>
+        <td>String</td>
+        <td>Alamat fisik sekolah.</td>
+      </tr>
+      <tr>
+        <td><code>city</code></td>
+        <td>String</td>
+        <td>Kota / Kabupaten letak sekolah.</td>
+      </tr>
+      <tr>
+        <td><code>province</code></td>
+        <td>String</td>
+        <td>Provinsi letak sekolah.</td>
+      </tr>
+      <tr>
+        <td><code>status</code></td>
+        <td>String</td>
+        <td>Status kerja sama sekolah (<code>active</code> / <code>inactive</code>).</td>
+      </tr>
+      <tr>
+        <td><code>created_at</code></td>
+        <td>Timestamp ISO</td>
+        <td>Tanggal dan waktu sekolah didaftarkan.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SHEET 03_CLASSES -->
+  <h3>3. Tabel <code>03_CLASSES</code> (Master Data Kelas)</h3>
+  <p>Menyimpan data kelas di setiap sekolah beserta tahun akademik berjalan.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Nama Kolom</th>
+        <th>Tipe Data</th>
+        <th>Deskripsi / Kegunaan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>id</code></td>
+        <td>String (Primary Key)</td>
+        <td>ID Unik Kelas dengan prefix <code>CLS</code> (contoh: <code>CLS001</code>).</td>
+      </tr>
+      <tr>
+        <td><code>school_id</code></td>
+        <td>String (Foreign Key)</td>
+        <td>Berelasi dengan ID sekolah di sheet <code>02_SCHOOLS</code>.</td>
+      </tr>
+      <tr>
+        <td><code>address</code></td>
+        <td>String</td>
+        <td>Lokasi gedung kelas (opsional).</td>
+      </tr>
+      <tr>
+        <td><code>academic_year</code></td>
+        <td>String</td>
+        <td>Tahun ajaran aktif (contoh: 2025/2026).</td>
+      </tr>
+      <tr>
+        <td><code>grade</code></td>
+        <td>String / Number</td>
+        <td>Tingkatan kelas (contoh: 10, 11, 12).</td>
+      </tr>
+      <tr>
+        <td><code>class_name</code></td>
+        <td>String</td>
+        <td>Nama rombongan belajar (contoh: IPA 1, IPS 2).</td>
+      </tr>
+      <tr>
+        <td><code>status</code></td>
+        <td>String</td>
+        <td>Status keaktifan kelas (<code>active</code> / <code>inactive</code>).</td>
+      </tr>
+      <tr>
+        <td><code>created_at</code></td>
+        <td>Timestamp ISO</td>
+        <td>Tanggal dan waktu kelas dibuat.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SHEET 04_STUDENTS -->
+  <h3>4. Tabel <code>04_STUDENTS</code> (Data Murid)</h3>
+  <p>Menyimpan data identitas siswa SMA yang dipantau.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Nama Kolom</th>
+        <th>Tipe Data</th>
+        <th>Deskripsi / Kegunaan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>id</code></td>
+        <td>String (Primary Key)</td>
+        <td>ID Unik Siswa dengan prefix <code>STD</code> (contoh: <code>STD001</code>).</td>
+      </tr>
+      <tr>
+        <td><code>school_id</code></td>
+        <td>String (Foreign Key)</td>
+        <td>Sekolah asal siswa (berelasi dengan <code>02_SCHOOLS</code>).</td>
+      </tr>
+      <tr>
+        <td><code>class_id</code></td>
+        <td>String (Foreign Key)</td>
+        <td>Kelas asal siswa (berelasi dengan <code>03_CLASSES</code>).</td>
+      </tr>
+      <tr>
+        <td><code>student_code</code></td>
+        <td>String</td>
+        <td>NISN atau kode unik yang digunakan siswa untuk login.</td>
+      </tr>
+      <tr>
+        <td><code>nama</code></td>
+        <td>String</td>
+        <td>Nama lengkap siswa.</td>
+      </tr>
+      <tr>
+        <td><code>gender</code></td>
+        <td>String (L / P)</td>
+        <td>Jenis Kelamin: <code>L</code> (Laki-laki) atau <code>P</code> (Perempuan).</td>
+      </tr>
+      <tr>
+        <td><code>birth_date</code></td>
+        <td>Date String</td>
+        <td>Tanggal lahir siswa (format: YYYY-MM-DD).</td>
+      </tr>
+      <tr>
+        <td><code>status</code></td>
+        <td>String</td>
+        <td>Status siswa (<code>active</code> / <code>inactive</code>).</td>
+      </tr>
+      <tr>
+        <td><code>created_at</code></td>
+        <td>Timestamp ISO</td>
+        <td>Waktu pendaftaran siswa.</td>
+      </tr>
+      <tr>
+        <td><code>updated_at</code></td>
+        <td>Timestamp ISO</td>
+        <td>Waktu data siswa terakhir diubah.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SHEET 05_EXAMINATIONS -->
+  <h3>5. Tabel <code>05_EXAMINATIONS</code> (Pemeriksaan Gizi Antropometri)</h3>
+  <p>Menyimpan data rekam medis antropometri siswa (tinggi badan, berat badan, IMT).</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Nama Kolom</th>
+        <th>Tipe Data</th>
+        <th>Deskripsi / Kegunaan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>id</code></td>
+        <td>String (Primary Key)</td>
+        <td>ID Unik Pemeriksaan dengan prefix <code>EXM</code> (contoh: <code>EXM001</code>).</td>
+      </tr>
+      <tr>
+        <td><code>student_id</code></td>
+        <td>String (Foreign Key)</td>
+        <td>Berelasi dengan ID Siswa di sheet <code>04_STUDENTS</code>.</td>
+      </tr>
+      <tr>
+        <td><code>class_id</code></td>
+        <td>String (Foreign Key)</td>
+        <td>ID Kelas siswa saat diperiksa (berelasi dengan <code>03_CLASSES</code>).</td>
+      </tr>
+      <tr>
+        <td><code>examination_date</code></td>
+        <td>Date String</td>
+        <td>Tanggal dilaksanakannya pemeriksaan (YYYY-MM-DD).</td>
+      </tr>
+      <tr>
+        <td><code>weight_kg</code></td>
+        <td>Number</td>
+        <td>Berat badan siswa dalam satuan Kilogram (kg).</td>
+      </tr>
+      <tr>
+        <td><code>height_cm</code></td>
+        <td>Number</td>
+        <td>Tinggi badan siswa dalam satuan Sentimeter (cm).</td>
+      </tr>
+      <tr>
+        <td><code>bmi</code></td>
+        <td>Number</td>
+        <td>Nilai IMT hasil pembagian Berat (kg) / Tinggi kuadrat (m²).</td>
+      </tr>
+      <tr>
+        <td><code>nutrional_status</code></td>
+        <td>String</td>
+        <td><strong>Typo dipertahankan</strong>: Klasifikasi WHO (Normal, Obese, dll.).</td>
+      </tr>
+      <tr>
+        <td><code>examiner_id</code></td>
+        <td>String (Foreign Key)</td>
+        <td>ID Guru/Kader pemeriksa (berelasi dengan <code>01_USERS</code>).</td>
+      </tr>
+      <tr>
+        <td><code>notes</code></td>
+        <td>String</td>
+        <td>Catatan tambahan hasil pemeriksaan.</td>
+      </tr>
+      <tr>
+        <td><code>created_at</code></td>
+        <td>Timestamp ISO</td>
+        <td>Waktu data pemeriksaan dimasukkan ke database.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SHEET 06_SCREENINGS -->
+  <h3>6. Tabel <code>06_SCREENINGS</code> (Skrining Hb & Tekanan Darah)</h3>
+  <p>Menyimpan log pemeriksaan Hb anemia dan tensi.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Nama Kolom</th>
+        <th>Tipe Data</th>
+        <th>Deskripsi / Kegunaan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>id</code></td>
+        <td>String (Primary Key)</td>
+        <td>ID Unik Skrining dengan prefix <code>SCR</code> (contoh: <code>SCR001</code>).</td>
+      </tr>
+      <tr>
+        <td><code>student_id</code></td>
+        <td>String (Foreign Key)</td>
+        <td>Berelasi dengan ID Siswa di sheet <code>04_STUDENTS</code>.</td>
+      </tr>
+      <tr>
+        <td><code>class_id</code></td>
+        <td>String (Foreign Key)</td>
+        <td>ID Kelas siswa saat diskrining.</td>
+      </tr>
+      <tr>
+        <td><code>screening_date</code></td>
+        <td>Date String</td>
+        <td>Tanggal dilaksanakannya skrining.</td>
+      </tr>
+      <tr>
+        <td><code>screening_type</code></td>
+        <td>String</td>
+        <td>Jenis skrining: <code>Anemia</code> atau <code>Tekanan Darah</code>.</td>
+      </tr>
+      <tr>
+        <td><code>result</code></td>
+        <td>String</td>
+        <td>Hasil pengukuran (misal: <code>11.5 g/dL (Anemia)</code> atau <code>120/80 mmHg</code>).</td>
+      </tr>
+      <tr>
+        <td><code>notes</code></td>
+        <td>String</td>
+        <td>Catatan medis tambahan petugas.</td>
+      </tr>
+      <tr>
+        <td><code>examiner_id</code></td>
+        <td>String (Foreign Key)</td>
+        <td>ID Petugas pemeriksa (berelasi dengan <code>01_USERS</code>).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SHEET 07_TTD -->
+  <h3>7. Tabel <code>07_TTD</code> (Pencatatan Konsumsi Tablet Tambah Darah)</h3>
+  <p>Menyimpan riwayat kepatuhan konsumsi TTD mingguan bagi siswa perempuan.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Nama Kolom</th>
+        <th>Tipe Data</th>
+        <th>Deskripsi / Kegunaan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>id</code></td>
+        <td>String (Primary Key)</td>
+        <td>ID Unik log TTD dengan prefix <code>TTD</code>.</td>
+      </tr>
+      <tr>
+        <td><code>student_id</code></td>
+        <td>String (Foreign Key)</td>
+        <td>Berelasi dengan ID Siswa di sheet <code>04_STUDENTS</code>.</td>
+      </tr>
+      <tr>
+        <td><code>class_id</code></td>
+        <td>String (Foreign Key)</td>
+        <td>ID Kelas murid.</td>
+      </tr>
+      <tr>
+        <td><code>consumption_date</code></td>
+        <td>Date String</td>
+        <td>Tanggal pemberian / konsumsi obat (YYYY-MM-DD).</td>
+      </tr>
+      <tr>
+        <td><code>consumed</code></td>
+        <td>Boolean / String</td>
+        <td>Pernyataan minum obat (<code>true</code> / <code>false</code> atau <code>Ya</code> / <code>Tidak</code>).</td>
+      </tr>
+      <tr>
+        <td><code>quantity</code></td>
+        <td>Number</td>
+        <td>Jumlah tablet yang dikonsumsi (biasanya 1).</td>
+      </tr>
+      <tr>
+        <td><code>recorded_by</code></td>
+        <td>String (Foreign Key)</td>
+        <td>ID Guru perekam (berelasi dengan <code>01_USERS</code>).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SHEET 08_EDUCATIONS -->
+  <h3>8. Tabel <code>08_EDUCATIONS</code> (Materi Artikel Edukasi)</h3>
+  <p>Menyimpan naskah artikel edukasi gizi dan kesehatan publik.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Nama Kolom</th>
+        <th>Tipe Data</th>
+        <th>Deskripsi / Kegunaan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>id</code></td>
+        <td>String (Primary Key)</td>
+        <td>ID Unik Artikel dengan prefix <code>EDU</code>.</td>
+      </tr>
+      <tr>
+        <td><code>title</code></td>
+        <td>String</td>
+        <td>Judul lengkap artikel edukasi.</td>
+      </tr>
+      <tr>
+        <td><code>slug</code></td>
+        <td>String</td>
+        <td>Pengenal ramah URL (contoh: <code>cara-mencegah-anemia</code>).</td>
+      </tr>
+      <tr>
+        <td><code>category</code></td>
+        <td>String</td>
+        <td>Kategori artikel (contoh: <code>Nutrisi</code>, <code>Hb</code>, <code>TTD</code>).</td>
+      </tr>
+      <tr>
+        <td><code>excerpt</code></td>
+        <td>String</td>
+        <td>Ringkasan pendek artikel yang tampil di kartu beranda.</td>
+      </tr>
+      <tr>
+        <td><code>content</code></td>
+        <td>String (HTML/Text)</td>
+        <td>Isi naskah lengkap artikel edukasi kesehatan.</td>
+      </tr>
+      <tr>
+        <td><code>thumbnail_url</code></td>
+        <td>String URL</td>
+        <td>Link gambar ilustrasi artikel.</td>
+      </tr>
+      <tr>
+        <td><code>status</code></td>
+        <td>String</td>
+        <td>Status publikasi (<code>published</code> / <code>draft</code>).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SHEET 09_AUDIT_LOG -->
+  <h3>9. Tabel <code>09_AUDIT_LOG</code> (Log Riwayat Perubahan)</h3>
+  <p>Mencatat rekam audit setiap aksi penulisan data (Insert/Update) di website demi keamanan integritas database.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Nama Kolom</th>
+        <th>Tipe Data</th>
+        <th>Deskripsi / Kegunaan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>id</code></td>
+        <td>String (Primary Key)</td>
+        <td>ID Unik Log dengan prefix <code>LOG</code>.</td>
+      </tr>
+      <tr>
+        <td><code>user_id</code></td>
+        <td>String (Foreign Key)</td>
+        <td>ID Pengguna yang melakukan aksi (berelasi dengan <code>01_USERS</code>).</td>
+      </tr>
+      <tr>
+        <td><code>action</code></td>
+        <td>String</td>
+        <td>Jenis tindakan database (<code>CREATE</code>, <code>UPDATE</code>, <code>DELETE</code>).</td>
+      </tr>
+      <tr>
+        <td><code>table_name</code></td>
+        <td>String</td>
+        <td>Nama tabel spreadsheet yang diubah (misal: <code>04_STUDENTS</code>).</td>
+      </tr>
+      <tr>
+        <td><code>record_id</code></td>
+        <td>String</td>
+        <td>ID dari baris record yang diubah.</td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td>String</td>
+        <td>Penjelasan aktivitas secara mendetail (contoh: <em>Menambahkan siswa baru: Budi (12345)</em>).</td>
+      </tr>
+      <tr>
+        <td><code>timestamp</code></td>
+        <td>Timestamp ISO</td>
+        <td>Waktu tepat aktivitas tersebut terjadi.</td>
+      </tr>
+    </tbody>
+  </table>
+
+</body>
+</html>
