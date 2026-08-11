@@ -6,9 +6,9 @@
 ---
 
 ## 1. Deployment Error
-- **Error Code**: `ENOENT: no such file or directory, open '/vercel/path0/package.json'` (Error: Command "npm install" exited with 254)
-- **Deployment ID Reference**: `sin1::2c862-1786406609987-495feabbb1c4`
-- **Description**: Vercel gagal melakukan instalasi dependensi saat mendeploy dari root folder repositori karena tidak dapat menemukan berkas `package.json` di direktori utama (`/vercel/path0/`).
+- **Error Code**: `Error: No Next.js version detected. Make sure your package.json has "next" in either "dependencies" or "devDependencies".` (exited with 1)
+- **Deployment ID Reference**: `sin1::67fz9-1786417141985-7920ad318aa3`
+- **Description**: Vercel me-load root folder sebagai Next.js project secara default, tetapi gagal mendeteksi versi Next.js karena file `package.json` di root repositori tidak mencantumkan `"next"` sebagai dependency proyek.
 
 ---
 
@@ -69,26 +69,33 @@
 ---
 
 ## 9. Root Cause
-1. **Ketidakberadaan `package.json` di Root**: Ketika mendeploy repositori monorepo/multi-folder di Vercel dengan konfigurasi root default (`/`), Vercel langsung mengeksekusi perintah `npm install` di folder root repositori. Hal ini memicu error `ENOENT` karena `package.json` Next.js tersimpan di dalam folder `/frontend/`.
-2. **Kegagalan Inisialisasi Pustaka Node**: Absennya file konfigurasi root menyebabkan Vercel membatalkan alur build (exit code 254) sebelum builder Next.js sempat menganalisis subfolder.
+1. **Bypass Deteksi Versi Next.js**: Saat mendeploy dengan root directory default (`/`), Vercel mendeteksi Next.js framework preset tetapi memverifikasi versi Next.js pada file `package.json` di root repositori. Karena root `package.json` sebelumnya tidak memiliki depen `next`, Vercel membatalkan build dengan pesan error "No Next.js version detected".
+2. **Ketergantungan Metadata package.json**: Vercel builder Next.js memerlukan kecocokan metadata dependensi di tingkat root meskipun perintah build-nya dialihkan via `vercel.json`.
 
 ---
 
 ## 10. Fix Applied
-Perbaikan diimplementasikan dengan menambahkan mekanisme build delegation langsung di tingkat root repositori (isolated & zero configuration di dashboard Vercel):
+Perbaikan diimplementasikan dengan melengkapi konfigurasi build delegation pada tingkat root repositori:
 
-1. **Membuat Root `package.json`**: Menambahkan berkas `package.json` di root repositori untuk mendeklarasikan lingkungan Node.js dan menyediakan script proxy build:
-   - `"build": "cd frontend && npm run build"`
-   - `"install": "cd frontend && npm install"`
-2. **Membuat Root `vercel.json`**: Mengonfigurasi berkas `vercel.json` di direktori utama repositori untuk mengesampingkan perintah bawaan Vercel:
+1. **Pembaruan Root `package.json`**: Menyertakan dependensi Next.js, React, dan React-DOM pada root `package.json` untuk memenuhi syarat validasi versi builder Vercel:
    ```json
    {
-     "installCommand": "cd frontend && npm install",
-     "buildCommand": "cd frontend && npm run build",
-     "outputDirectory": "frontend/.next"
+     "name": "santara-root",
+     "version": "1.0.0",
+     "private": true,
+     "scripts": {
+       "build": "cd frontend && npm run build",
+       "install": "cd frontend && npm install"
+     },
+     "dependencies": {
+       "next": "16.3.0",
+       "react": "19.2.8",
+       "react-dom": "19.2.8"
+     }
    }
    ```
-3. **Penyelarasan Git & Push**: Semua file konfigurasi baru di-push ke GitHub untuk secara otomatis memicu proses build ulang di Vercel secara out-of-the-box.
+2. **Mempertahankan Root `vercel.json`**: Tetap mengandalkan `vercel.json` di root repositori untuk mendelegasikan alur build ke subfolder `frontend/` dan mengarahkan output target ke `frontend/.next`.
+3. **Penyelarasan Git & Push**: Mendorong berkas konfigurasi terbaru ke GitHub untuk memicu jalannya deployment otomatis yang sukses di Vercel.
 
 ---
 
