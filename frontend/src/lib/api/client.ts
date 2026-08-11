@@ -10,8 +10,7 @@
 
 import { ApiResult } from '@/types/api';
 
-const DIRECT_GAS_URL =
-  'https://script.google.com/macros/s/AKfycby-x8OD8YHovfac2hf3R65WPGQYd1iR8lTDy06dafBzn9LFRPAjbEfYjZwiRzrE_AIayw/exec';
+const DIRECT_GAS_URL = '';
 
 export function getApiBaseUrl(): string {
   // In the browser, use the same-origin Next.js proxy route to prevent CORS / 302 errors

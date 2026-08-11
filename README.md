@@ -35,7 +35,7 @@ Di halaman konfigurasi project sebelum deploy, lakukan pengaturan berikut:
 SANTARA membutuhkan endpoint API backend untuk sinkronisasi data. Di bagian **Environment Variables**, tambahkan variabel berikut:
 
 - **Key**: `NEXT_PUBLIC_SANTARA_API_URL`
-- **Value**: `https://script.google.com/macros/s/AKfycby-x8OD8YHovfac2hf3R65WPGQYd1iR8lTDy06dafBzn9LFRPAjbEfYjZwiRzrE_AIayw/exec`
+- **Value**: `https://script.google.com/macros/s/YOUR_APPS_SCRIPT_DEPLOYMENT_ID/exec`
 
 *Catatan: Nilai di atas mengarah langsung ke Web App Apps Script production `@13` yang terhubung dengan live database Google Sheets.*
 

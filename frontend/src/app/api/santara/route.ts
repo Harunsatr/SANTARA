@@ -3,13 +3,19 @@ import { NextRequest, NextResponse } from 'next/server';
 const GAS_API_URL =
   process.env.SANTARA_SERVER_API_URL ||
   process.env.NEXT_PUBLIC_SANTARA_API_URL ||
-  'https://script.google.com/macros/s/AKfycby-x8OD8YHovfac2hf3R65WPGQYd1iR8lTDy06dafBzn9LFRPAjbEfYjZwiRzrE_AIayw/exec';
+  '';
 
 /**
  * Server-side Proxy GET Handler
  * Bypasses browser CORS restrictions, adblockers, and 302 redirect issues.
  */
 export async function GET(request: NextRequest) {
+  if (!GAS_API_URL) {
+    return NextResponse.json(
+      { success: false, error: 'CONFIG_ERROR', message: 'Backend API URL is not configured' },
+      { status: 500 }
+    );
+  }
   try {
     const searchParams = request.nextUrl.searchParams;
     const targetUrl = new URL(GAS_API_URL);
@@ -65,6 +71,12 @@ export async function GET(request: NextRequest) {
  * Server-side Proxy POST Handler
  */
 export async function POST(request: NextRequest) {
+  if (!GAS_API_URL) {
+    return NextResponse.json(
+      { success: false, error: 'CONFIG_ERROR', message: 'Backend API URL is not configured' },
+      { status: 500 }
+    );
+  }
   try {
     const body = await request.json();
 

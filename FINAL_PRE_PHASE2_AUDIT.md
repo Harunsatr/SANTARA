@@ -13,7 +13,7 @@ Final Pre-Phase 2 Data Gate telah dilaksanakan secara komprehensif untuk memveri
 
 ### Ringkasan Status Gate:
 - **Backend & REST API Engine**: **100% PASS** (Kode modular, bebas bug sintaks, penanganan CORS dan error JSON aman).
-- **Deployment Parity**: **100% MATCH** (Versi `@13` pada deployment `AKfycby-x8OD8YHovfac2hf3R65WPGQYd1iR8lTDy06dafBzn9LFRPAjbEfYjZwiRzrE_AIayw` aktif dan terverifikasi).
+- **Deployment Parity**: **100% MATCH** (Versi `@13` pada deployment `YOUR_APPS_SCRIPT_DEPLOYMENT_ID` aktif dan terverifikasi).
 - **API Contract**: **100% FROZEN & STABLE** (8 handler GET, 11 handler POST).
 - **Database Schema**: **100% INTACT** (9 worksheet, seluruh kolom dan field kritis `nutrional_status` tetap murni).
 - **Data Quality**: **READY WITH DATA REVIEW** (Ditemukan 1 catatan data legacy `STD002` yang memerlukan konfirmasi pemilik data dan baris placeholder pada `03_CLASSES` yang siap ditangani secara defensif oleh frontend).
@@ -131,7 +131,7 @@ Seluruh endpoint REST API terverifikasi beroperasi tanpa penyimpangan skema:
 |---|---|---|
 | **Zero Code Changes** | **PASS** | File `Kode.js` dan `appsscript.json` tidak mengalami perubahan selama audit. |
 | **Zero Database Deletion** | **PASS** | Tidak ada baris yang dihapus, ditimpa, atau di-truncate di Google Sheets. |
-| **Zero Deployment Drift** | **PASS** | Deployment ID `AKfycby-x8OD8YHovfac2hf3R65WPGQYd1iR8lTDy06dafBzn9LFRPAjbEfYjZwiRzrE_AIayw` versi `@13` tetap aktif. |
+| **Zero Deployment Drift** | **PASS** | Deployment ID `YOUR_APPS_SCRIPT_DEPLOYMENT_ID` versi `@13` tetap aktif. |
 | **Non-Destructive Testing** | **PASS** | Pengujian hanya melakukan operasi pembacaan (HTTP GET) dan verifikasi respon. |
 
 ---
