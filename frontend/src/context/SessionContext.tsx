@@ -26,10 +26,11 @@ import React, {
 } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { PrototypeSession } from '@/types/auth';
-import { User } from '@/types/models';
+import { User, Student } from '@/types/models';
 import {
   validateSessionObject,
   createSessionFromUser,
+  createSessionFromStudent,
   canAccessRoute,
   getDefaultRoute,
   normalizeRole,
@@ -39,7 +40,7 @@ interface SessionContextType {
   user: PrototypeSession | null;
   isAuthenticated: boolean;
   isReady: boolean;
-  loginAs: (user: User) => void;
+  loginAs: (userOrStudent: User | Student) => void;
   logout: () => void;
 }
 
@@ -134,8 +135,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const loginAs = useCallback(
-    (userRecord: User) => {
-      const newSession = createSessionFromUser(userRecord);
+    (record: User | Student) => {
+      const isStudent = 'student_code' in record;
+      const newSession = isStudent
+        ? createSessionFromStudent(record as Student)
+        : createSessionFromUser(record as User);
+
       setStoredSession(newSession);
       const defaultRoute = getDefaultRoute(newSession.role);
       router.push(defaultRoute);

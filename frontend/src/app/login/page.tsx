@@ -1,36 +1,37 @@
 'use client';
 
-// PROTOTYPE ONLY
-// This session mechanism is NOT production authentication.
-// Production authentication requires server-side authentication,
-// password hashing, secure token/session management,
-// authorization, and backend access control.
-
 import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
   Button,
   Card,
-  Badge,
   Alert,
   LoadingState,
   ErrorState,
+  Input,
+  Select,
 } from '@/components/ui';
-import { fetchUsers, fetchSchools } from '@/lib/api';
-import { resolveSchoolName } from '@/lib/adapters';
-import { filterActiveUsers, getRoleLabel } from '@/lib/auth/roleGuard';
-import { useSession } from '@/context/SessionContext';
-import { User, School } from '@/types/models';
 import {
-  UserCheck,
+  fetchUsers,
+  fetchSchools,
+  fetchClasses,
+  fetchStudents,
+  createStudent,
+} from '@/lib/api';
+import { useSession } from '@/context/SessionContext';
+import { User, School, ClassRoom, Student } from '@/types/models';
+import {
   LogIn,
-  HeartPulse,
+  UserPlus,
   ArrowLeft,
-  ShieldAlert,
-  Sparkles,
-  AlertCircle,
+  HeartPulse,
+  User as UserIcon,
   Lock,
+  AlertCircle,
+  Calendar,
+  Sparkles,
+  GraduationCap,
 } from 'lucide-react';
 
 function LoginContent() {
@@ -39,29 +40,53 @@ function LoginContent() {
 
   const [users, setUsers] = useState<User[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
+  const [classes, setClasses] = useState<ClassRoom[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { loginAs, user: activeSession } = useSession();
+
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [loginId, setLoginId] = useState('');
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { loginAs } = useSession();
+
+  // Registration Form State
+  const [regNama, setRegNama] = useState('');
+  const [regGender, setRegGender] = useState<'L' | 'P' | ''>('');
+  const [regSchoolId, setRegSchoolId] = useState('');
+  const [regClassId, setRegClassId] = useState('');
+  const [regStudentCode, setRegStudentCode] = useState('');
+  const [regBirthDate, setRegBirthDate] = useState('');
+  const [regError, setRegError] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;
 
-    async function loadUserAccounts() {
+    async function loadDatabaseData() {
       try {
-        const [usersRes, schoolsRes] = await Promise.all([
+        const [usersRes, schoolsRes, classesRes, studentsRes] = await Promise.all([
           fetchUsers(),
           fetchSchools(),
+          fetchClasses(),
+          fetchStudents(),
         ]);
 
         if (!ignore) {
           if (usersRes.success && Array.isArray(usersRes.data)) {
             setUsers(usersRes.data);
           } else {
-            setError(usersRes.message || 'Gagal memuat daftar akun pengguna dari database');
+            setError(usersRes.message || 'Gagal memuat daftar pengguna dari database');
           }
 
           if (schoolsRes.success && Array.isArray(schoolsRes.data)) {
             setSchools(schoolsRes.data);
+          }
+          if (classesRes.success && Array.isArray(classesRes.data)) {
+            setClasses(classesRes.data);
+          }
+          if (studentsRes.success && Array.isArray(studentsRes.data)) {
+            setStudents(studentsRes.data);
           }
           setLoading(false);
         }
@@ -73,14 +98,144 @@ function LoginContent() {
       }
     }
 
-    loadUserAccounts();
+    loadDatabaseData();
 
     return () => {
       ignore = true;
     };
   }, []);
 
-  const { activeUsers, inactiveUsers } = filterActiveUsers(users);
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError(null);
+    const id = loginId.trim();
+
+    if (!id) {
+      setLoginError('ID Pengguna atau Kode Siswa wajib diisi');
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      // 1. Cari di users (01_USERS) - ADMIN / GURU
+      const userMatch = users.find(
+        u => u.id.toLowerCase() === id.toLowerCase() || u.email.toLowerCase() === id.toLowerCase()
+      );
+
+      if (userMatch) {
+        if (userMatch.status !== 'active') {
+          setLoginError('Akun pengguna berstatus tidak aktif');
+          setSubmitting(false);
+          return;
+        }
+        loginAs(userMatch);
+        return;
+      }
+
+      // 2. Cari di students (04_STUDENTS) - SISWA
+      const studentMatch = students.find(
+        s => s.id.toLowerCase() === id.toLowerCase() || s.student_code.toLowerCase() === id.toLowerCase()
+      );
+
+      if (studentMatch) {
+        if (studentMatch.status !== 'active') {
+          setLoginError('Akun siswa berstatus tidak aktif');
+          setSubmitting(false);
+          return;
+        }
+        loginAs(studentMatch);
+        return;
+      }
+
+      setLoginError('ID Pengguna atau Kode Siswa tidak ditemukan');
+    } catch (err: unknown) {
+      setLoginError(err instanceof Error ? err.message : 'Terjadi kesalahan sistem');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegError(null);
+
+    if (!regNama.trim()) {
+      setRegError('Nama Lengkap wajib diisi');
+      return;
+    }
+    if (!regGender) {
+      setRegError('Jenis Kelamin wajib dipilih');
+      return;
+    }
+    if (!regSchoolId) {
+      setRegError('Sekolah wajib dipilih');
+      return;
+    }
+    if (!regClassId) {
+      setRegError('Kelas wajib dipilih');
+      return;
+    }
+    if (!regStudentCode.trim()) {
+      setRegError('Kode Siswa / NISN wajib diisi');
+      return;
+    }
+    if (!regBirthDate) {
+      setRegError('Tanggal Lahir wajib diisi');
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      // Periksa apakah Kode Siswa sudah terdaftar
+      const isDuplicate = students.some(
+        s => s.school_id === regSchoolId && s.class_id === regClassId && s.student_code.toLowerCase() === regStudentCode.trim().toLowerCase()
+      );
+
+      if (isDuplicate) {
+        setRegError('Kode Siswa / NISN sudah terdaftar di kelas ini');
+        setSubmitting(false);
+        return;
+      }
+
+      const res = await createStudent({
+        school_id: regSchoolId,
+        class_id: regClassId,
+        student_code: regStudentCode.trim(),
+        nama: regNama.trim(),
+        gender: regGender as 'L' | 'P',
+        birth_date: regBirthDate,
+        status: 'active',
+      });
+
+      if (res.success && res.data) {
+        loginAs(res.data);
+      } else {
+        setRegError(res.message || 'Gagal mendaftar siswa baru');
+      }
+    } catch (err: unknown) {
+      setRegError(err instanceof Error ? err.message : 'Koneksi ke API gagal');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Filter kelas berdasarkan sekolah yang dipilih
+  const filteredClasses = classes.filter(c => c.school_id === regSchoolId);
+
+  // General Login Button for Students: Logs in as the first active student or prompts them to register
+  const handleStudentGeneralLogin = () => {
+    if (students.length > 0) {
+      const activeStudent = students.find(s => s.status === 'active');
+      if (activeStudent) {
+        loginAs(activeStudent);
+        return;
+      }
+    }
+    setIsRegistering(true);
+    setLoginError('Belum ada siswa terdaftar. Silakan lakukan pendaftaran baru.');
+  };
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 sm:px-6 py-12 sm:py-16">
@@ -97,29 +252,24 @@ function LoginContent() {
         {/* Brand Header */}
         <div className="flex flex-col items-center text-center gap-3">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-600 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
-            <HeartPulse className="w-7 h-7 animate-pulse text-white" />
+            <HeartPulse className="w-7 h-7 text-white" />
           </div>
           <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight font-display">
-                Masuk ke SANTARA
-              </h1>
-              <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-sky-100 text-sky-800 rounded-md border border-sky-200">
-                PROTOTYPE
-              </span>
-            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight font-display">
+              Portal Layanan SANTARA
+            </h1>
             <p className="text-xs sm:text-sm text-slate-500 max-w-md">
-              Pilih akun pengguna aktif dari database <code>01_USERS</code> untuk mengaktifkan sesi kerja.
+              Sistem Pemantauan Kesehatan Remaja SMA
             </p>
           </div>
         </div>
 
         {/* Reason Alerts */}
         {reason === 'invalid_session' && (
-          <Alert variant="warning" title="Session Tidak Valid">
+          <Alert variant="warning" title="Sesi Berakhir">
             <div className="flex items-center gap-2 text-xs text-amber-900">
               <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Session tidak valid atau telah kedaluwarsa. Silakan pilih profil kembali.</span>
+              <span>Sesi Anda telah kedaluwarsa. Silakan masuk kembali.</span>
             </div>
           </Alert>
         )}
@@ -128,122 +278,198 @@ function LoginContent() {
           <Alert variant="error" title="Akses Ditolak">
             <div className="flex items-center gap-2 text-xs text-rose-900">
               <Lock className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>Akun Anda tidak memiliki izin role untuk mengakses modul ini. Silakan pilih profil yang sesuai.</span>
+              <span>Anda tidak memiliki izin akses ke modul ini.</span>
             </div>
           </Alert>
         )}
 
         {reason === 'logged_out' && (
-          <Alert variant="info" title="Sesi Selesai">
+          <Alert variant="info" title="Keluar Berhasil">
             <div className="flex items-center gap-2 text-xs text-sky-900">
-              <UserCheck className="w-4 h-4 text-sky-600 shrink-0" />
-              <span>Anda telah keluar dari sesi kerja prototype.</span>
+              <UserIcon className="w-4 h-4 text-sky-600 shrink-0" />
+              <span>Sesi Anda telah diakhiri dengan aman.</span>
             </div>
           </Alert>
         )}
 
-        {/* Development Prototype Transparency Banner */}
-        <Alert variant="warning" title="PROTOTYPE SESSION — AUTH BACKEND REQUIRED FOR PRODUCTION">
-          <div className="flex items-start gap-2 mt-1">
-            <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-900 leading-relaxed">
-              Mode ini menggunakan pemilihan profil aktif untuk simulasi alur kerja. Autentikasi production dengan password hashing dan token JWT belum diimplementasikan.
-            </p>
-          </div>
-        </Alert>
-
-        {/* Account Selection Card */}
-        <Card className="p-6 sm:p-8 flex flex-col gap-4 shadow-sm border-slate-200/80">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Akun Pengguna Aktif (01_USERS)
-            </span>
-            <Badge variant="primary" size="sm">
-              {activeUsers.length} Akun Siap
-            </Badge>
+        {/* Main Card Container */}
+        <Card className="p-6 sm:p-8 flex flex-col gap-6 shadow-sm border-slate-200/80">
+          {/* Card Toggle Tab */}
+          <div className="flex border-b border-slate-100">
+            <button
+              type="button"
+              onClick={() => {
+                setIsRegistering(false);
+                setLoginError(null);
+                setRegError(null);
+              }}
+              className={`flex-1 pb-3 text-sm font-extrabold uppercase tracking-wider border-b-2 transition-all ${
+                !isRegistering
+                  ? 'border-sky-500 text-sky-600 font-bold'
+                  : 'border-transparent text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              Masuk Akun
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsRegistering(true);
+                setLoginError(null);
+                setRegError(null);
+              }}
+              className={`flex-1 pb-3 text-sm font-extrabold uppercase tracking-wider border-b-2 transition-all ${
+                isRegistering
+                  ? 'border-sky-500 text-sky-600 font-bold'
+                  : 'border-transparent text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              Pendaftaran Siswa
+            </button>
           </div>
 
           {loading ? (
-            <LoadingState text="Menghubungkan ke database pengguna..." />
+            <LoadingState text="Menghubungkan ke database SANTARA..." />
           ) : error ? (
             <ErrorState message={error} onRetry={() => window.location.reload()} />
-          ) : activeUsers.length === 0 ? (
-            <div className="text-center py-8 text-xs text-slate-500">
-              Tidak ada akun pengguna berstatus aktif di database.
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {activeUsers.map(u => {
-                const isCurrentActive = activeSession?.userId === u.id || activeSession?.id === u.id;
-                const schoolName = resolveSchoolName(u.school_id, schools);
-
-                return (
-                  <div
-                    key={u.id}
-                    className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
-                      isCurrentActive
-                        ? 'bg-sky-50/80 border-sky-300 ring-1 ring-sky-300'
-                        : 'bg-white border-slate-200/80 hover:border-slate-300 hover:bg-slate-50/50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-2xs shrink-0">
-                        <UserCheck className="w-5 h-5" />
-                      </div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-900">{u.name}</span>
-                          {isCurrentActive && (
-                            <Badge variant="success" size="sm">
-                              Sesi Aktif
-                            </Badge>
-                          )}
-                        </div>
-                        <span className="text-xs text-slate-500 font-medium">
-                          {getRoleLabel(u.role)} • ID: <code className="font-mono text-[11px]">{u.id}</code>
-                        </span>
-                        <span className="text-[11px] text-slate-400 mt-0.5">
-                          {schoolName}
-                        </span>
-                      </div>
-                    </div>
-
-                    <Button
-                      size="sm"
-                      variant={isCurrentActive ? 'secondary' : 'primary'}
-                      onClick={() => loginAs(u)}
-                      leftIcon={isCurrentActive ? <Sparkles className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
-                      className="w-full sm:w-auto shrink-0 font-bold"
-                    >
-                      {isCurrentActive ? 'Buka Dashboard' : 'Masuk Sesi'}
-                    </Button>
-                  </div>
-                );
-              })}
-
-              {/* Inactive Users Display (Disabled) */}
-              {inactiveUsers.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    Akun Tidak Aktif / Belum Lengkap ({inactiveUsers.length})
-                  </span>
-                  {inactiveUsers.map(u => (
-                    <div
-                      key={u.id}
-                      className="p-3 rounded-xl border border-slate-200 bg-slate-50/60 opacity-60 flex items-center justify-between gap-3 text-xs"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-slate-600">{u.name || '(Tanpa Nama)'}</span>
-                        <span className="text-slate-400 font-mono text-[10px]">ID: {u.id}</span>
-                      </div>
-                      <Badge variant="warning" size="sm">
-                        Non-Aktif
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
+          ) : !isRegistering ? (
+            /* ==================== LOGIN FORM ==================== */
+            <form onSubmit={handleLogin} className="flex flex-col gap-4">
+              {loginError && (
+                <Alert variant="error" title="Gagal Masuk">
+                  <span className="text-xs text-rose-950">{loginError}</span>
+                </Alert>
               )}
-            </div>
+
+              <Input
+                label="ID Pengguna atau Kode Siswa"
+                placeholder="Contoh: USR001, USR003, STD001, dll."
+                value={loginId}
+                onChange={e => setLoginId(e.target.value)}
+                disabled={submitting}
+                leftIcon={<UserIcon className="w-4 h-4 text-slate-400" />}
+                helperText="Masukkan Kode User / Siswa terdaftar untuk mengakses dashboard."
+              />
+
+              <div className="flex flex-col gap-2.5 mt-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isLoading={submitting}
+                  className="w-full font-bold min-h-[44px]"
+                  leftIcon={<LogIn className="w-4 h-4" />}
+                >
+                  Masuk ke Aplikasi
+                </Button>
+
+                <div className="relative flex py-2 items-center">
+                  <div className="flex-grow border-t border-slate-100"></div>
+                  <span className="flex-shrink mx-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">Atau Masuk Umum</span>
+                  <div className="flex-grow border-t border-slate-100"></div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleStudentGeneralLogin}
+                  disabled={submitting}
+                  className="w-full font-bold min-h-[44px]"
+                  leftIcon={<Sparkles className="w-4 h-4 text-sky-500" />}
+                >
+                  Masuk untuk Umum (Role Siswa)
+                </Button>
+              </div>
+            </form>
+          ) : (
+            /* ==================== REGISTER FORM ==================== */
+            <form onSubmit={handleRegister} className="flex flex-col gap-4">
+              {regError && (
+                <Alert variant="error" title="Gagal Mendaftar">
+                  <span className="text-xs text-rose-950">{regError}</span>
+                </Alert>
+              )}
+
+              <Input
+                label="Nama Lengkap Siswa"
+                placeholder="Masukkan nama lengkap sesuai absen"
+                value={regNama}
+                onChange={e => setRegNama(e.target.value)}
+                disabled={submitting}
+                leftIcon={<UserIcon className="w-4 h-4 text-slate-400" />}
+              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Select
+                  label="Jenis Kelamin"
+                  placeholder="Pilih jenis kelamin"
+                  value={regGender}
+                  onChange={e => setRegGender(e.target.value as 'L' | 'P' | '')}
+                  disabled={submitting}
+                  options={[
+                    { value: 'L', label: 'Laki-laki (L)' },
+                    { value: 'P', label: 'Perempuan (P)' },
+                  ]}
+                />
+
+                <Input
+                  label="Tanggal Lahir"
+                  type="date"
+                  value={regBirthDate}
+                  onChange={e => setRegBirthDate(e.target.value)}
+                  disabled={submitting}
+                  leftIcon={<Calendar className="w-4 h-4 text-slate-400" />}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Select
+                  label="Sekolah"
+                  placeholder="Pilih asal sekolah"
+                  value={regSchoolId}
+                  onChange={e => {
+                    setRegSchoolId(e.target.value);
+                    setRegClassId('');
+                  }}
+                  disabled={submitting}
+                  options={schools.map(s => ({
+                    value: s.id,
+                    label: s.name,
+                  }))}
+                />
+
+                <Select
+                  label="Kelas"
+                  placeholder={regSchoolId ? 'Pilih kelas' : 'Pilih sekolah dahulu'}
+                  value={regClassId}
+                  onChange={e => setRegClassId(e.target.value)}
+                  disabled={submitting || !regSchoolId}
+                  options={filteredClasses.map(c => ({
+                    value: c.id,
+                    label: `Kelas ${c.grade} - ${c.class_name}`,
+                  }))}
+                />
+              </div>
+
+              <Input
+                label="Kode Siswa / NISN / No. Induk"
+                placeholder="Contoh: 12345"
+                value={regStudentCode}
+                onChange={e => setRegStudentCode(e.target.value)}
+                disabled={submitting}
+                leftIcon={<GraduationCap className="w-4 h-4 text-slate-400" />}
+                helperText="Kode ini akan digunakan untuk masuk kembali di kemudian hari."
+              />
+
+              <Button
+                type="submit"
+                variant="primary"
+                isLoading={submitting}
+                className="w-full font-bold min-h-[44px] mt-2"
+                leftIcon={<UserPlus className="w-4 h-4" />}
+              >
+                Daftar & Masuk Otomatis
+              </Button>
+            </form>
           )}
         </Card>
       </div>

@@ -22,7 +22,6 @@ import {
   Menu,
   X,
   UserCheck,
-  ShieldAlert,
   ShieldCheck,
 } from 'lucide-react';
 import { useSession } from '@/context/SessionContext';
@@ -64,18 +63,6 @@ export function KaderNavbar() {
 
   return (
     <header className="sticky top-0 z-40 w-full bg-slate-900 text-white shadow-md border-b border-slate-800">
-      {/* Prototype Warning Banner (Mandatory Requirement) */}
-      <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-1.5 text-center text-[11px] font-semibold text-amber-300">
-        <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 flex-wrap">
-          <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span className="font-bold tracking-wider uppercase">
-            PROTOTYPE SESSION — AUTH BACKEND REQUIRED FOR PRODUCTION
-          </span>
-          <span className="text-amber-200/80 font-normal hidden md:inline">
-            • Mode ini menggunakan pemilihan profil aktif untuk simulasi alur kerja. Autentikasi production dengan password hashing dan token JWT belum diimplementasikan.
-          </span>
-        </div>
-      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand Logo */}

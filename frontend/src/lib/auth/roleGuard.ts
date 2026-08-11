@@ -5,7 +5,7 @@
 // authorization, and backend access control.
 
 import { AppRole, PrototypeSession, SessionValidationResult } from '@/types/auth';
-import { User } from '@/types/models';
+import { User, Student } from '@/types/models';
 
 // ============================================================
 // ROLE CONSTANTS — Exactly 3 canonical roles
@@ -185,6 +185,32 @@ export function createSessionFromUser(user: User): PrototypeSession {
     created_at: now,
   };
 }
+
+/**
+ * Converts a database Student model into a normalized PrototypeSession object for SISWA role.
+ */
+export function createSessionFromStudent(student: Student): PrototypeSession {
+  const userId = student.id.trim();
+  const userName = (student.nama || 'Siswa SANTARA').trim();
+  const now = new Date().toISOString();
+
+  return {
+    userId,
+    id: userId,
+    userName,
+    name: userName,
+    role: 'SISWA',
+    schoolId: student.school_id ? student.school_id.trim() : undefined,
+    school_id: student.school_id ? student.school_id.trim() : undefined,
+    classId: student.class_id ? student.class_id.trim() : undefined,
+    class_id: student.class_id ? student.class_id.trim() : undefined,
+    studentId: student.id.trim(),
+    status: 'active',
+    createdAt: now,
+    created_at: now,
+  };
+}
+
 
 /**
  * Filters users to active & inactive buckets. Replaces old filterActiveKaderUsers.

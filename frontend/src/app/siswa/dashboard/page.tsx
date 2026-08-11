@@ -29,7 +29,6 @@ import {
   Pill,
   User,
   LogOut,
-  ShieldAlert,
   BookOpen,
   ArrowRight,
   GraduationCap,
@@ -115,15 +114,6 @@ export default function SiswaDashboardPage() {
     <div className="min-h-screen bg-slate-50">
       {/* Prototype Header */}
       <div className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800">
-        <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-1.5 text-center text-[11px] font-semibold text-amber-300">
-          <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
-            <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span className="font-bold tracking-wider uppercase">
-              PROTOTYPE SESSION — AUTH BACKEND REQUIRED FOR PRODUCTION
-            </span>
-          </div>
-        </div>
-
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-sm">
@@ -309,11 +299,7 @@ export default function SiswaDashboardPage() {
           </>
         )}
 
-        {/* Prototype Notice */}
-        <div className="text-center text-xs text-slate-400 pb-4">
-          PROTOTYPE AUTHORIZATION — Data siswa difilter secara client-side berdasarkan nama pengguna.
-          Auth backend dengan student_id formal diperlukan untuk isolasi data production.
-        </div>
+
       </div>
     </div>
   );

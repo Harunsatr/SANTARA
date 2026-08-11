@@ -187,13 +187,14 @@ Solusi dan perbaikan yang telah diterapkan pada frontend:
 3. **Penyaringan User Tidak Aktif**: Frontend menolak profil USR002 di halaman pilihan prototype login agar tidak menyebabkan crash status sesi.
 4. **Pembersihan UI Label**: Mengganti semua label hardcoded "Kader SATRIA" menjadi "SANTARA" dan menampilkan role dinamis yang sesuai (Administrator / Guru Kesehatan / Siswa).
 5. **Perbaikan Double Render Navbar**: Mengeliminasi rendering langsung `<KaderNavbar />` pada `src/app/admin/users/page.tsx` sehingga manajemen rendering dikembalikan sepenuhnya secara terpusat pada layout wrapper `Shell.tsx`.
+6. **Pembersihan Sesi Prototype & Pendaftaran Siswa**: Menghilangkan daftar pilihan profil aktif dan banner prototype untuk mencegah akses tidak sah ke akun admin/guru. Memperkenalkan *ID Login* terpadu (menginput User ID / Student ID) dan *Pendaftaran Siswa Baru* yang langsung tersinkronisasi dengan database Google Sheets (`createStudent`).
 
 ---
 
 ## 15. Issues Remaining
 
 Beberapa batasan sistem yang masih ada dan sengaja dipertahankan karena aturan Change Control:
-- **Autentikasi Formil**: Penggunaan password hashing dan token JWT di backend belum tersedia. Sesi prototype dengan profil aktif dipertahankan dengan warning banner yang jelas.
+- **Autentikasi Formil**: Penggunaan password hashing dan token JWT di backend belum tersedia. Sesi dijalankan menggunakan ID Pengguna / Kode Siswa terdaftar secara langsung tanpa tampilan pilihan profil aktif demi mencegah akses tidak sah ke panel admin.
 - **Penyimpanan Foto Fisik TTD**: Apps Script belum mendukung upload gambar biner; metadata diunggah dalam format base64/teks pada kolom catatan (`notes`).
 
 ---
