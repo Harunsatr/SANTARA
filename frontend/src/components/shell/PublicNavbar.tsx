@@ -12,7 +12,7 @@ export function PublicNavbar() {
 
   const navLinks = [
     { href: '/', label: 'Beranda' },
-    { href: '/edukasi', label: 'Informasi Anemia' },
+    { href: '/edukasi', label: 'Edukasi Anemia (CAGAR)' },
     { href: '/grafik', label: 'Grafik Status Gizi' },
   ];
 
@@ -34,7 +34,7 @@ export function PublicNavbar() {
               </span>
             </div>
             <span className="text-[11px] font-medium text-slate-500 hidden sm:block">
-              Pemantauan Kesehatan Remaja SMA
+              Sistem Pemantauan Kesehatan Remaja SMA
             </span>
           </div>
         </Link>
@@ -67,7 +67,7 @@ export function PublicNavbar() {
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl shadow-sm hover:shadow-sky-500/20 transition-all active:scale-95"
           >
             <LogIn className="w-4 h-4" />
-            <span>Login Guru</span>
+            <span>Login Kader</span>
           </Link>
         </div>
 
@@ -117,7 +117,7 @@ export function PublicNavbar() {
               className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl"
             >
               <LogIn className="w-4 h-4" />
-              <span>Login Guru SATRIA</span>
+              <span>Login Kader SATRIA</span>
             </Link>
           </div>
         </div>

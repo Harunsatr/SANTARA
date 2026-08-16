@@ -9,7 +9,6 @@ import {
 } from '@/components/ui';
 import { fetchEducations } from '@/lib/api';
 import { EducationArticle } from '@/types/models';
-import { calculateBMI } from '@/lib/utils/number';
 import { formatDateIndonesian } from '@/lib/utils/date';
 import {
   BookOpen,
@@ -30,9 +29,6 @@ export default function PublicEducationPage() {
 
   // Interactive Digital CAGAR State
   const [gender, setGender] = useState<'L' | 'P'>('P');
-  const [age, setAge] = useState<number>(16);
-  const [weight, setWeight] = useState<string>('50');
-  const [height, setHeight] = useState<string>('158');
   const [selectedIronSource, setSelectedIronSource] = useState<string>('hati');
   const [selectedDrink, setSelectedDrink] = useState<string>('jeruk');
 
@@ -62,9 +58,6 @@ export default function PublicEducationPage() {
     articleCategory === 'ALL'
       ? articles
       : articles.filter(a => (a.category || '').toUpperCase() === articleCategory);
-
-  // CAGAR Simulation Calculations
-  const bmiResult = calculateBMI(Number(weight) || 0, Number(height) || 0);
 
   const ironFoodDatabase: Record<
     string,
@@ -148,19 +141,19 @@ export default function PublicEducationPage() {
         </div>
       </section>
 
-      {/* 3. INTERACTIVE DIGITAL CAGAR (CAKRAM GIZI ANEMIA REMAJA) */}
+      {/* 3. MEDIA EDUKASI ANEMIA CAGAR (CAKRAM GIZI ANEMIA REMAJA) */}
       <section className="p-6 sm:p-10 rounded-3xl bg-gradient-to-br from-sky-900 via-sky-950 to-slate-900 text-white border border-sky-800 shadow-xl flex flex-col gap-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-sky-800/80 pb-6">
           <div className="flex flex-col gap-1">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-bold uppercase tracking-wider w-fit">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Simulasi Interaktif</span>
+              <span>Media Edukasi Fisik &amp; Simulasi</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-white font-display">
-              CAGAR Digital (Cakram Gizi Anemia Remaja)
+              Media Edukasi Anemia CAGAR (Cakram Gizi Anemia Remaja)
             </h2>
-            <p className="text-xs sm:text-sm text-sky-200/80">
-              Putar dan pilih variabel untuk melihat kebutuhan gizi, status indeks massa tubuh, serta kombinasi penyerapan zat besi harianmu!
+            <p className="text-xs sm:text-sm text-sky-200/80 max-w-2xl">
+              Cakram putar edukasi pencegahan anemia yang memuat klasifikasi kadar Hb menurut jenis kelamin, penyebab anemia, sumber makanan kaya zat besi (heme &amp; non-heme), serta faktor pendukung dan penghambat absorpsi zat besi.
             </p>
           </div>
           <Button
@@ -168,9 +161,6 @@ export default function PublicEducationPage() {
             variant="outline"
             onClick={() => {
               setGender('P');
-              setAge(16);
-              setWeight('50');
-              setHeight('158');
               setSelectedIronSource('hati');
               setSelectedDrink('jeruk');
             }}
@@ -181,12 +171,43 @@ export default function PublicEducationPage() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Rotary Disc Physical Specifications */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col gap-1.5">
+            <span className="text-[11px] font-bold text-sky-300 uppercase tracking-wider">
+              Bagian 1 • Klasifikasi Gender
+            </span>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Membedakan kadar normal Hb dan risiko anemia remaja putri (<strong>Merah Muda</strong>, Hb &ge; 12.0 g/dL) dan remaja putra (<strong>Biru</strong>, Hb &ge; 13.0 g/dL).
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col gap-1.5">
+            <span className="text-[11px] font-bold text-emerald-300 uppercase tracking-wider">
+              Bagian 2 • Penyebab &amp; Sumber Pangan
+            </span>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Zona <strong>Hijau</strong> menyajikan informasi penyebab anemia, sumber zat besi hewani/nabati, dan kombinasi pangan peningkat penyerapan zat besi.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col gap-1.5">
+            <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider">
+              Spesifikasi Fisik Media
+            </span>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Cakram putar ganda berbahan <strong>Artpaper 310 gsm</strong> dengan diameter piringan dalam 12,5 cm dan piringan luar 11,5 cm.
+            </p>
+          </div>
+        </div>
+
+        {/* Interactive Absorption Simulation */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-2">
           {/* Controls Panel */}
           <div className="lg:col-span-5 flex flex-col gap-5 bg-white/5 p-6 rounded-2xl border border-white/10">
             <h3 className="text-sm font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2">
               <Zap className="w-4 h-4" />
-              <span>1. Profil Fisik & Antropometri</span>
+              <span>1. Pengaturan Gender &amp; Kebutuhan Zat Besi</span>
             </h3>
 
             {/* Gender Select */}
@@ -202,7 +223,7 @@ export default function PublicEducationPage() {
                       : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
                   }`}
                 >
-                  Remaja Putri (Wajib TTD)
+                  Remaja Putri (Target 15 mg Fe)
                 </button>
                 <button
                   type="button"
@@ -213,53 +234,14 @@ export default function PublicEducationPage() {
                       : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
                   }`}
                 >
-                  Remaja Putra
+                  Remaja Putra (Target 11 mg Fe)
                 </button>
-              </div>
-            </div>
-
-            {/* Age, Weight, Height Inputs */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-300">Usia (Thn)</label>
-                <input
-                  type="number"
-                  min="13"
-                  max="19"
-                  value={age}
-                  onChange={e => setAge(Number(e.target.value) || 16)}
-                  className="bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-sky-500"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-300">Berat (kg)</label>
-                <input
-                  type="number"
-                  min="30"
-                  max="150"
-                  value={weight}
-                  onChange={e => setWeight(e.target.value)}
-                  className="bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-sky-500"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-300">Tinggi (cm)</label>
-                <input
-                  type="number"
-                  min="100"
-                  max="220"
-                  value={height}
-                  onChange={e => setHeight(e.target.value)}
-                  className="bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-sky-500"
-                />
               </div>
             </div>
 
             <h3 className="text-sm font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2 mt-2">
               <Flame className="w-4 h-4" />
-              <span>2. Pilihan Pangan & Pendamping</span>
+              <span>2. Pilihan Pangan &amp; Minuman Pendamping</span>
             </h3>
 
             {/* Iron Source Choice */}
@@ -297,28 +279,30 @@ export default function PublicEducationPage() {
 
           {/* Results Visual Output */}
           <div className="lg:col-span-7 flex flex-col gap-4">
-            {/* BMI & Growth Card */}
+            {/* Target Card */}
             <div className="p-5 rounded-2xl bg-white/10 border border-white/15 flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-sky-300 uppercase tracking-wider">
-                  Indeks Massa Tubuh (IMT)
+                  Target Kebutuhan Zat Besi Remaja
                 </span>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/20 font-bold">
-                  Usia {age} Tahun
+                  {gender === 'P' ? 'Remaja Putri' : 'Remaja Putra'}
                 </span>
               </div>
               <div className="flex items-baseline gap-3">
                 <span className="text-3xl sm:text-4xl font-black text-white">
-                  {bmiResult !== null ? bmiResult.toFixed(1) : '-'}
+                  {dailyTargetMg}
                 </span>
-                <span className="text-xs text-slate-300">kg/m²</span>
+                <span className="text-xs text-slate-300">mg Fe / hari</span>
               </div>
               <p className="text-xs text-sky-100 leading-relaxed">
-                Kebutuhan zat besi harian estimasi:{' '}
-                <strong className="text-white font-bold">{dailyTargetMg} mg Fe / hari</strong>.
-                {gender === 'P' && (
-                  <span className="text-rose-300 font-semibold block mt-1">
-                    *Remaja putri memerlukan asupan zat besi lebih tinggi serta wajib konsumsi 1 Tablet Tambah Darah (TTD) tiap minggu saat menstruasi / program UKS.
+                {gender === 'P' ? (
+                  <span className="text-rose-200 font-semibold block">
+                    Remaja putri wajib mengonsumsi makanan tinggi zat besi dan 1 Tablet Tambah Darah (TTD) tiap minggu saat menstruasi / program UKS untuk mengganti zat besi yang hilang.
+                  </span>
+                ) : (
+                  <span className="text-sky-200 font-semibold block">
+                    Remaja putra membutuhkan zat besi yang cukup untuk mendukung lonjakan pertumbuhan fisik (growth spurt) dan pembentukan massa otot.
                   </span>
                 )}
               </p>
@@ -327,7 +311,7 @@ export default function PublicEducationPage() {
             {/* Absorption Mechanism Feedback */}
             <div className="p-5 rounded-2xl bg-white/10 border border-white/15 flex flex-col gap-4">
               <span className="text-xs font-bold text-sky-300 uppercase tracking-wider">
-                Analisis Absorpsi & Bioavailabilitas
+                Analisis Absorpsi &amp; Bioavailabilitas Makanan
               </span>
 
               {/* Food Info */}
@@ -507,6 +491,40 @@ export default function PublicEducationPage() {
             ))}
           </div>
         )}
+      </section>
+
+      {/* 6. BUKU PANDUAN TERPADU UKS (PDF DOWNLOAD) */}
+      <section className="p-6 sm:p-8 rounded-3xl bg-slate-900 text-white border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+        <div className="flex flex-col gap-2 max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full text-xs font-bold uppercase tracking-wider w-fit">
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Dokumen Panduan Resmi UKS</span>
+          </div>
+          <h2 className="text-xl sm:text-2xl font-bold text-white font-display">
+            Panduan Terpadu UKS: Pengukuran Status Gizi dan Skrining Kesehatan Remaja di Sekolah Menengah Atas
+          </h2>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Format resmi pedoman teknis pengukuran antropometri (TB, BB, IMT/U WHO Anthro Plus), kalibrasi alat ukur, skrining Hb, serta tata laksana kepatuhan konsumsi TTD bagi tim UKS sekolah.
+          </p>
+        </div>
+
+        <div className="shrink-0 w-full sm:w-auto">
+          <a
+            href="/docs/PANDUAN_PENGGUNAAN_SANTARA.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto inline-flex"
+          >
+            <Button
+              variant="primary"
+              size="md"
+              className="w-full sm:w-auto font-bold bg-emerald-600 hover:bg-emerald-700 shadow-md text-xs sm:text-sm"
+              rightIcon={<BookOpen className="w-4 h-4" />}
+            >
+              Lihat &amp; Unduh Panduan PDF
+            </Button>
+          </a>
+        </div>
       </section>
     </div>
   );

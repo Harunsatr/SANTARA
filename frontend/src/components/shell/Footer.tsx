@@ -56,7 +56,7 @@ export function Footer() {
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
-              Sistem Pemantauan Kesehatan Remaja SMA — Platform digital terpadu untuk pencatatan status gizi, skrining anemia, dan kepatuhan konsumsi Tablet Tambah Darah (TTD) oleh guru SATRIA.
+              Sistem Pemantauan Kesehatan Remaja SMA — Platform digital terpadu untuk pencatatan status gizi, skrining anemia, dan kepatuhan konsumsi Tablet Tambah Darah (TTD) oleh kader SATRIA.
             </p>
           </div>
 
@@ -68,8 +68,8 @@ export function Footer() {
             <ul className="text-xs text-slate-400 space-y-1.5 leading-relaxed">
               <li>• <strong>CAGAR</strong> — Cakram Gizi Anemia Remaja</li>
               <li>• <strong>JAKRA</strong> — Jejak Kesehatan Remaja (Kartu Fisik F4)</li>
-              <li>• <strong>Panduan Terpadu UKS</strong> — Buku Standar Pengukuran Gizi</li>
-              <li>• <strong>Guru SATRIA</strong> — Siswa Terlatih Sadar Anemia &amp; Gizi</li>
+              <li>• <strong>Panduan Terpadu UKS</strong> — Pengukuran Status Gizi & Skrining Kesehatan</li>
+              <li>• <strong>Kader SATRIA</strong> — Satuan Remaja Peduli Kesehatan</li>
             </ul>
           </div>
 

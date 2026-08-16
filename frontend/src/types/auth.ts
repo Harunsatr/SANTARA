@@ -6,9 +6,10 @@
 
 /**
  * SANTARA Application Role Enum
- * Exactly 3 roles. Source of truth for all authorization logic.
+ * Exactly 3 canonical roles: ADMIN, KADER, SISWA.
+ * Source of truth for all authorization logic.
  */
-export type AppRole = 'ADMIN' | 'GURU' | 'SISWA';
+export type AppRole = 'ADMIN' | 'KADER' | 'SISWA' | 'GURU';
 
 /**
  * Standard typed Prototype Session object stored in localStorage

@@ -19,7 +19,7 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: 'SANTARA — Sistem Pemantauan Kesehatan Remaja SMA',
   description:
-    'Platform digital terpadu untuk pencatatan status gizi, skrining kesehatan anemia, dan kepatuhan konsumsi Tablet Tambah Darah (TTD) siswa SMA oleh guru SATRIA.',
+    'Platform digital terpadu untuk pencatatan status gizi, skrining kesehatan anemia, dan kepatuhan konsumsi Tablet Tambah Darah (TTD) siswa SMA oleh kader SATRIA.',
   keywords: [
     'SANTARA',
     'SATRIA',

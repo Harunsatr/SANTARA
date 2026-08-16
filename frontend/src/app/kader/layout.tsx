@@ -29,7 +29,7 @@ export default function KaderLayout({
     }
 
     const role = normalizeRole(String(user.role));
-    if (role !== 'ADMIN' && role !== 'GURU') {
+    if (role !== 'ADMIN' && role !== 'KADER' && (role as string) !== 'GURU') {
       // SISWA and unknown roles should not be here
       if (role === 'SISWA') {
         router.push('/siswa/dashboard');
@@ -56,7 +56,7 @@ export default function KaderLayout({
   }
 
   const role = normalizeRole(String(user.role));
-  if (role !== 'ADMIN' && role !== 'GURU') {
+  if (role !== 'ADMIN' && role !== 'KADER' && (role as string) !== 'GURU') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900">
         <LoadingState text="Mengarahkan..." />

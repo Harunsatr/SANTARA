@@ -108,20 +108,23 @@ export default function HomePage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="flex flex-col items-center text-center gap-6 max-w-3xl mx-auto">
-            {/* Program Badge */}
+            {/* Platform Tagline Badge */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/15 border border-sky-400/30 text-sky-200 text-xs sm:text-sm font-semibold shadow-xs">
               <Sparkles className="w-4 h-4 text-sky-400" />
-              <span>Program Pengabdian Masyarakat BIMA Kemendikbudristek & FIK UM</span>
+              <span>Sistem Pemantauan Kesehatan Remaja SMA</span>
             </div>
 
             {/* Main Headline */}
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight font-display leading-[1.15]">
-              Pemantauan Kesehatan & Gizi Remaja SMA Terpadu
+              SANTARA
             </h1>
+            <p className="text-lg sm:text-2xl font-bold text-sky-300 -mt-2 font-display">
+              Sistem Pemantauan Kesehatan Remaja SMA
+            </p>
 
             {/* Description */}
-            <p className="text-sm sm:text-lg text-slate-300 leading-relaxed max-w-2xl font-sans">
-              Platform digital kolaboratif bagi guru <strong>SATRIA</strong> dan <strong>UKS</strong> dalam pencatatan status gizi antropometri standar WHO Anthro Plus, deteksi dini anemia remaja, dan pemantauan kepatuhan Tablet Tambah Darah (TTD).
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl font-sans">
+              Platform pemantauan kesehatan remaja yang membantu <strong>kader SATRIA</strong> mencatat, memantau, dan mengelola data status gizi, skrining kesehatan, serta konsumsi Tablet Tambah Darah siswa secara terintegrasi.
             </p>
 
             {/* Action CTAs */}
@@ -144,7 +147,7 @@ export default function HomePage() {
                   className="w-full sm:w-auto text-sm sm:text-base font-bold bg-white/10 hover:bg-white/20 text-white border-white/20"
                   leftIcon={<BookOpen className="w-4 h-4" />}
                 >
-                  Informasi Anemia & CAGAR
+                  Edukasi Anemia & CAGAR
                 </Button>
               </Link>
 
@@ -155,7 +158,7 @@ export default function HomePage() {
                   className="w-full sm:w-auto text-sm sm:text-base font-bold bg-slate-800/80 hover:bg-slate-800 text-sky-300 border-sky-500/40"
                   leftIcon={<Users className="w-4 h-4" />}
                 >
-                  Login Guru SATRIA
+                  Login Kader
                 </Button>
               </Link>
             </div>
@@ -231,7 +234,7 @@ export default function HomePage() {
                   Edukasi Gizi & Cakram CAGAR
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Penyuluhan interaktif mengenai gejala 5L (Lesu, Letih, Lemah, Lelah, Lalai), pemilihan pangan kaya zat besi, dan penggunaan media fisik <strong>CAGAR (Cakram Gizi Anemia Remaja)</strong>.
+                  Penyuluhan interaktif mengenai pencegahan anemia, klasifikasi anemia menurut jenis kelamin, gejala 5L, dan pemanfaatan media edukasi <strong>CAGAR (Cakram Gizi Anemia Remaja)</strong>.
                 </p>
               </div>
               <div className="mt-auto pt-2">
@@ -239,7 +242,7 @@ export default function HomePage() {
                   href="/edukasi"
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-600 hover:text-sky-700"
                 >
-                  <span>Pelajari Materi Anemia</span>
+                  <span>Pelajari Media CAGAR</span>
                   <ChevronRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -258,7 +261,7 @@ export default function HomePage() {
                   Antropometri & Skrining Klinis
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Pengukuran antropometri (TB, BB, IMT/U WHO Anthro Plus), pengukuran Lingkar Lengan Atas (LiLA), serta skrining hemoglobin (Hb) dan tekanan darah berkala.
+                  Pengukuran antropometri (TB, BB, IMT/U WHO Anthro Plus), pengukuran Lingkar Lengan Atas (LiLA), serta skrining hemoglobin (Hb) dan tekanan darah berkala oleh kader SATRIA.
                 </p>
               </div>
               <div className="mt-auto pt-2">
@@ -279,13 +282,13 @@ export default function HomePage() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-bold text-rose-600 uppercase tracking-wider">
-                  Pilar 3 • Lingkungan Sehat
+                  Pilar 3 • Pembinaan Lingkungan Sehat
                 </span>
                 <h3 className="text-lg font-bold text-slate-900">
                   Kepatuhan Tablet Tambah Darah
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Gerakan Aksi Bergizi mingguan melalui minum TTD bersama bagi remaja putri, dipantau secara digital dan dicatat dalam kartu rekam fisik <strong>JAKRA</strong>.
+                  Gerakan Aksi Bergizi mingguan melalui konsumsi TTD bersama bagi remaja putri, dipantau secara digital dan dicatat dalam kartu rekam fisik <strong>JAKRA</strong>.
                 </p>
               </div>
               <div className="mt-auto pt-2">
@@ -293,7 +296,7 @@ export default function HomePage() {
                   href="/login"
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-700"
                 >
-                  <span>Pencatatan Guru TTD</span>
+                  <span>Pencatatan Kader TTD</span>
                   <ChevronRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -302,39 +305,39 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. PERAN GURU SATRIA */}
+      {/* 3. PERAN KADER SATRIA */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 text-white border border-slate-800 flex flex-col lg:flex-row items-center gap-8 justify-between">
           <div className="flex flex-col gap-4 max-w-xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-full text-xs font-bold uppercase tracking-wider w-fit">
               <Award className="w-4 h-4" />
-              <span>Peer Educator • SATRIA</span>
+              <span>Pengelola Utama • SATRIA</span>
             </div>
 
             <h2 className="text-2xl sm:text-4xl font-black tracking-tight font-display text-white">
-              Siapakah Guru SATRIA?
+              Siapakah Kader SATRIA?
             </h2>
 
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              <strong>SATRIA (Siswa Terlatih Sadar Anemia & Gizi)</strong> adalah agen perubahan kesehatan remaja dari anggota Palang Merah Remaja (PMR) dan Pengurus UKS sekolah yang telah terlatih untuk:
+              <strong>SATRIA (Satuan Remaja Peduli Kesehatan)</strong> merupakan kader yang melakukan pengelolaan dan pemantauan kesehatan siswa di sekolah yang telah terlatih untuk:
             </p>
 
             <ul className="text-xs sm:text-sm text-slate-300 space-y-2 leading-relaxed">
               <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <span>Melakukan pengukuran antropometri dan LiLA secara akurat.</span>
+                <span>Melakukan pengukuran status gizi antropometri (TB, BB, IMT/U) dan LiLA secara akurat.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <span>Mendampingi skrining hemoglobin (Hb) bersama tenaga kesehatan.</span>
+                <span>Mendampingi skrining hemoglobin (Hb) dan tekanan darah berkala bersama tenaga kesehatan.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <span>Memandu konsumsi Tablet Tambah Darah (TTD) mingguan di kelas.</span>
+                <span>Memandu konsumsi Tablet Tambah Darah (TTD) mingguan bagi remaja putri.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <span>Mengoperasikan aplikasi web SANTARA dan kartu JAKRA fisik.</span>
+                <span>Mengoperasikan platform SANTARA serta pencatatan kartu rekam fisik JAKRA.</span>
               </li>
             </ul>
           </div>
@@ -342,14 +345,14 @@ export default function HomePage() {
           <div className="flex flex-col gap-4 w-full lg:w-80 bg-white/5 p-6 rounded-2xl border border-white/10 shrink-0">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-sky-400" />
-              <span>Akses Kerja Guru</span>
+              <span>Akses Kerja Kader</span>
             </h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Guru SATRIA dapat mengakses modul pencatatan klinis, kartu JAKRA siswa, dan entri skrining melalui dashboard terproteksi.
+              Kader SATRIA mengelola pencatatan status gizi, skrining kesehatan, kartu JAKRA, dan pemantauan TTD melalui akun terproteksi.
             </p>
             <Link href="/login" className="w-full mt-2">
               <Button variant="primary" className="w-full font-bold text-sm" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                Masuk Sesi Guru
+                Masuk Sesi Kader
               </Button>
             </Link>
           </div>
@@ -361,51 +364,104 @@ export default function HomePage() {
         <div className="flex flex-col gap-8">
           <div className="text-center max-w-2xl mx-auto flex flex-col gap-2">
             <Badge variant="secondary" className="mx-auto">
-              Ekosistem Pendamping
+              Media Inovasi Program
             </Badge>
             <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight font-display">
               Media Inovasi Intervensi UKS
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Kombinasi terstruktur antara media fisik dan aplikasi digital untuk memaksimalkan kepatuhan serta retensi edukasi.
+              Integrasi teknologi digital SANTARA dan media edukasi fisik terstruktur untuk pencegahan anemia dan pemantauan gizi berkelanjutan.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <Card className="p-6 bg-gradient-to-b from-sky-50/50 to-white border-sky-100">
-              <div className="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center font-black text-sm mb-3">
-                1
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* CAGAR */}
+            <Card className="p-6 bg-gradient-to-b from-sky-50/50 to-white border-sky-100 flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center font-black text-sm mb-3">
+                  1
+                </div>
+                <h3 className="text-base font-bold text-slate-900 mb-1">
+                  CAGAR — Cakram Gizi Anemia Remaja
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Media edukasi komprehensif pencegahan anemia berbahan Artpaper 310 gsm (diameter 12,5 & 11,5 cm) yang memuat klasifikasi anemia per jenis kelamin, penyebab anemia, dan sumber pangan kaya zat besi.
+                </p>
               </div>
-              <h3 className="text-base font-bold text-slate-900 mb-1">
-                CAGAR (Cakram Gizi Anemia Remaja)
-              </h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Media cakram putar fisik interaktif untuk mengenalkan klasifikasi IMT/U, kebutuhan asupan zat besi harian, dan porsi gizi seimbang.
-              </p>
+              <div className="mt-4 pt-3 border-t border-sky-100">
+                <Link href="/edukasi" className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1">
+                  <span>Pelajari Media CAGAR</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </Card>
 
-            <Card className="p-6 bg-gradient-to-b from-cyan-50/50 to-white border-cyan-100">
-              <div className="w-10 h-10 rounded-xl bg-cyan-600 text-white flex items-center justify-center font-black text-sm mb-3">
-                2
+            {/* JAKRA */}
+            <Card className="p-6 bg-gradient-to-b from-cyan-50/50 to-white border-cyan-100 flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-cyan-600 text-white flex items-center justify-center font-black text-sm mb-3">
+                  2
+                </div>
+                <h3 className="text-base font-bold text-slate-900 mb-1">
+                  JAKRA — Jejak Kesehatan Remaja
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Kartu pemantauan kesehatan fisik lipat F4 (21×33 cm) berbahan BW 250 gsm berisi identitas siswa, 12 kolom hasil pemeriksaan berkala, grafik pertumbuhan, dan himbauan hidup sehat.
+                </p>
               </div>
-              <h3 className="text-base font-bold text-slate-900 mb-1">
-                JAKRA (Jejak Kesehatan Remaja)
-              </h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Kartu rekam kesehatan fisik berukuran F4 yang disimpan setiap siswa sebagai rekam jejak pertumbuhan dan kepatuhan konsumsi TTD.
-              </p>
+              <div className="mt-4 pt-3 border-t border-cyan-100">
+                <Link href="/login" className="text-xs font-bold text-cyan-600 hover:text-cyan-700 flex items-center gap-1">
+                  <span>Lihat Format JAKRA</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </Card>
 
-            <Card className="p-6 bg-gradient-to-b from-emerald-50/50 to-white border-emerald-100">
-              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-sm mb-3">
-                3
+            {/* Buku Panduan */}
+            <Card className="p-6 bg-gradient-to-b from-emerald-50/50 to-white border-emerald-100 flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-sm mb-3">
+                  3
+                </div>
+                <h3 className="text-base font-bold text-slate-900 mb-1">
+                  Buku Panduan Terpadu UKS
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Buku panduan format A5 berbahan Artpaper 210 gsm berjudul <em>&quot;Pengukuran Status Gizi dan Skrining Kesehatan Remaja di Sekolah Menengah Atas&quot;</em>.
+                </p>
               </div>
-              <h3 className="text-base font-bold text-slate-900 mb-1">
-                Buku Panduan Terpadu UKS
-              </h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Pedoman operasional standar pengukuran antropometri, kalibrasi alat ukur, dan manajemen program gizi sekolah bagi pembina UKS.
-              </p>
+              <div className="mt-4 pt-3 border-t border-emerald-100">
+                <a
+                  href="/docs/PANDUAN_PENGGUNAAN_SANTARA.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                >
+                  <span>Lihat Panduan PDF</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </Card>
+
+            {/* Platform Website SANTARA */}
+            <Card className="p-6 bg-gradient-to-b from-indigo-50/50 to-white border-indigo-100 flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-sm mb-3">
+                  4
+                </div>
+                <h3 className="text-base font-bold text-slate-900 mb-1">
+                  Platform Website SANTARA
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Database kesehatan digital terintegrasi untuk pencatatan status gizi (WHO Anthro Plus), skrining klinis, pemantauan TTD real-time per kelas, dan portal edukasi.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-indigo-100">
+                <Link href="/login" className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+                  <span>Akses Dashboard</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </Card>
           </div>
         </div>

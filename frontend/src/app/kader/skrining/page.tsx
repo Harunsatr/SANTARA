@@ -346,10 +346,10 @@ export default function SkriningPage() {
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                Entri Skrining Kesehatan (Hb & Tekanan Darah)
+                Entri Skrining Kesehatan (Hb &amp; Tekanan Darah)
               </h1>
               <p className="text-sm text-slate-500 mt-0.5">
-                Pencatatan kadar Hemoglobin (Hb) dan Tekanan Darah siswa oleh guru SATRIA.
+                Pencatatan kadar Hemoglobin (Hb) dan Tekanan Darah siswa oleh kader SATRIA.
               </p>
             </div>
           </div>
@@ -643,7 +643,7 @@ export default function SkriningPage() {
           if (!isSubmitting) setIsAddModalOpen(false);
         }}
         title="Entri Skrining Kesehatan Siswa"
-        description="Pencatatan kadar Hemoglobin (Hb) dan Tekanan Darah siswa oleh guru SATRIA."
+        description="Pencatatan kadar Hemoglobin (Hb) dan Tekanan Darah siswa oleh kader SATRIA."
         maxWidth="lg"
       >
         <form onSubmit={handleSubmitScreening} className="space-y-4 pt-2">
@@ -774,7 +774,7 @@ export default function SkriningPage() {
             <label className="block text-xs font-semibold text-slate-700 mb-1">Catatan Tambahan</label>
             <textarea
               rows={2}
-              placeholder="Catatan kondisi fisik atau rekomendasi guru..."
+              placeholder="Catatan kondisi fisik atau rekomendasi kader SATRIA..."
               value={formNotes}
               onChange={e => setFormNotes(e.target.value)}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"

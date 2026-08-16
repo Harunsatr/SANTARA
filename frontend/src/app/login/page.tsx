@@ -343,13 +343,43 @@ function LoginContent() {
 
               <Input
                 label="ID Pengguna atau Kode Siswa"
-                placeholder="Contoh: USR001, USR003, STD001, dll."
+                placeholder="Contoh: USR001 (Admin), USR003 (Kader), STD001 (Siswa)"
                 value={loginId}
                 onChange={e => setLoginId(e.target.value)}
                 disabled={submitting}
                 leftIcon={<UserIcon className="w-4 h-4 text-slate-400" />}
-                helperText="Masukkan Kode User / Siswa terdaftar untuk mengakses dashboard."
+                helperText="Akses untuk Admin, Kader SATRIA, dan Siswa sesuai basis data SANTARA."
               />
+
+              {/* Quick Login Chips for Demo / Testing */}
+              <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Contoh Akses Akun:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setLoginId('USR001')}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-sky-400 text-slate-700 font-medium text-[11px] transition-colors"
+                  >
+                    👑 USR001 (Admin)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLoginId('USR003')}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-sky-400 text-slate-700 font-medium text-[11px] transition-colors"
+                  >
+                    🩺 USR003 (Kader SATRIA)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLoginId('STD001')}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-emerald-400 text-slate-700 font-medium text-[11px] transition-colors"
+                  >
+                    🎓 STD001 (Siswa)
+                  </button>
+                </div>
+              </div>
 
               <div className="flex flex-col gap-2.5 mt-2">
                 <Button
@@ -359,12 +389,12 @@ function LoginContent() {
                   className="w-full font-bold min-h-[44px]"
                   leftIcon={<LogIn className="w-4 h-4" />}
                 >
-                  Masuk ke Aplikasi
+                  Masuk ke Portal SANTARA
                 </Button>
 
                 <div className="relative flex py-2 items-center">
                   <div className="flex-grow border-t border-slate-100"></div>
-                  <span className="flex-shrink mx-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">Atau Masuk Umum</span>
+                  <span className="flex-shrink mx-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">Atau Masuk Cepat</span>
                   <div className="flex-grow border-t border-slate-100"></div>
                 </div>
 
@@ -376,7 +406,7 @@ function LoginContent() {
                   className="w-full font-bold min-h-[44px]"
                   leftIcon={<Sparkles className="w-4 h-4 text-sky-500" />}
                 >
-                  Masuk untuk Umum (Role Siswa)
+                  Masuk sebagai Siswa (Monitoring Hasil)
                 </Button>
               </div>
             </form>

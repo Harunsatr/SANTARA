@@ -30,7 +30,7 @@ export default function AdminLayout({
 
     const role = normalizeRole(String(user.role));
     if (role !== 'ADMIN') {
-      if (role === 'GURU') {
+      if (role === 'KADER' || (role as string) === 'GURU') {
         router.push('/kader/dashboard?reason=unauthorized');
       } else if (role === 'SISWA') {
         router.push('/siswa/dashboard?reason=unauthorized');

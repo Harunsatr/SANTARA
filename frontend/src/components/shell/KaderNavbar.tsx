@@ -75,7 +75,7 @@ export function KaderNavbar() {
               SANTARA
             </span>
             <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest -mt-0.5">
-              Sistem Kesehatan Remaja
+              Sistem Pemantauan Kesehatan Remaja SMA
             </span>
           </div>
         </Link>

@@ -560,7 +560,7 @@ export default function TtdPage() {
 
                         {/* Recorded By */}
                         <td className="py-3.5 px-4 text-xs text-slate-600 font-mono">
-                          {rec.recorded_by || 'Guru SATRIA'}
+                          {rec.recorded_by || 'Kader SATRIA'}
                         </td>
 
                         {/* Notes */}

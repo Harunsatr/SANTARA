@@ -37,7 +37,7 @@ import { useSession } from '@/context/SessionContext';
 const ROLE_FILTER_OPTIONS = [
   { label: 'Semua Role', value: 'ALL' },
   { label: 'Admin', value: 'ADMIN' },
-  { label: 'Guru', value: 'GURU' },
+  { label: 'Kader SATRIA', value: 'KADER' },
   { label: 'Siswa', value: 'SISWA' },
 ];
 
@@ -49,14 +49,14 @@ const STATUS_FILTER_OPTIONS = [
 
 function getRoleBadgeVariant(role: string | null): 'danger' | 'primary' | 'success' | 'neutral' {
   if (role === 'ADMIN') return 'danger';
-  if (role === 'GURU') return 'primary';
+  if (role === 'KADER' || role === 'GURU') return 'primary';
   if (role === 'SISWA') return 'success';
   return 'neutral';
 }
 
 function getRoleIcon(role: string | null) {
   if (role === 'ADMIN') return <ShieldCheck className="w-4 h-4 text-rose-500" />;
-  if (role === 'GURU') return <BookOpen className="w-4 h-4 text-sky-500" />;
+  if (role === 'KADER' || role === 'GURU') return <BookOpen className="w-4 h-4 text-sky-500" />;
   if (role === 'SISWA') return <GraduationCap className="w-4 h-4 text-emerald-500" />;
   return <Users className="w-4 h-4 text-slate-400" />;
 }
@@ -137,10 +137,10 @@ export default function AdminUsersPage() {
   const stats = useMemo(() => {
     const total = users.length;
     const admin = users.filter(u => normalizeRole(String(u.role || '')) === 'ADMIN').length;
-    const guru = users.filter(u => normalizeRole(String(u.role || '')) === 'GURU').length;
+    const kader = users.filter(u => normalizeRole(String(u.role || '')) === 'KADER').length;
     const siswa = users.filter(u => normalizeRole(String(u.role || '')) === 'SISWA').length;
     const active = users.filter(u => String(u.status || '').toLowerCase() === 'active').length;
-    return { total, admin, guru, siswa, active };
+    return { total, admin, kader, siswa, active };
   }, [users]);
 
   return (
@@ -192,7 +192,7 @@ export default function AdminUsersPage() {
           {[
             { label: 'Total Pengguna', value: stats.total, color: 'text-slate-900', bg: 'bg-slate-50', icon: <Users className="w-5 h-5 text-slate-500" /> },
             { label: 'Admin', value: stats.admin, color: 'text-rose-700', bg: 'bg-rose-50', icon: <ShieldCheck className="w-5 h-5 text-rose-500" /> },
-            { label: 'Guru', value: stats.guru, color: 'text-sky-700', bg: 'bg-sky-50', icon: <BookOpen className="w-5 h-5 text-sky-500" /> },
+            { label: 'Kader SATRIA', value: stats.kader, color: 'text-sky-700', bg: 'bg-sky-50', icon: <BookOpen className="w-5 h-5 text-sky-500" /> },
             { label: 'Siswa', value: stats.siswa, color: 'text-emerald-700', bg: 'bg-emerald-50', icon: <GraduationCap className="w-5 h-5 text-emerald-500" /> },
             { label: 'Akun Aktif', value: stats.active, color: 'text-indigo-700', bg: 'bg-indigo-50', icon: <CheckCircle2 className="w-5 h-5 text-indigo-500" /> },
           ].map((item) => (

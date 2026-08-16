@@ -35,6 +35,8 @@ import { EducationArticle } from '@/types/models';
 import { fetchEducations, createEducation, updateEducation } from '@/lib/api/educations';
 import { formatDateIndo } from '@/lib/utils/date';
 import { useSession } from '@/context/SessionContext';
+import { OFFICIAL_PROGRAM_ACTIVITIES } from '@/lib/services/activityPhotoService';
+import { Camera } from 'lucide-react';
 import Link from 'next/link';
 
 export default function EdukasiKelolaPage() {
@@ -610,6 +612,69 @@ export default function EdukasiKelolaPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* ========================================================================= */}
+      {/* SECTION: DOKUMENTASI KEGIATAN PROGRAM SATRIA                              */}
+      {/* ========================================================================= */}
+      <section className="flex flex-col gap-4 mt-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-100 rounded-xl text-emerald-700">
+              <Camera className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                Dokumentasi Kegiatan Program SATRIA
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                Log pelaksanaan sosialisasi, workshop, skrining klinis, dan pengukuran oleh kader SATRIA.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setToast({
+                message:
+                  'Penyimpanan berkas foto kegiatan belum dikonfigurasi pada server backend (Google Apps Script). Fitur ini memerlukan cloud storage terpisah.',
+                type: 'info',
+              });
+            }}
+            className="flex items-center gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+          >
+            <Camera className="w-4 h-4" />
+            <span>Unggah Foto Kegiatan</span>
+          </Button>
+        </div>
+
+        {/* Activity Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {OFFICIAL_PROGRAM_ACTIVITIES.map((act) => (
+            <Card key={act.id} className="p-4 flex flex-col justify-between border-slate-200 hover:border-emerald-300 hover:shadow-md transition-all">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <Badge variant="secondary" size="sm" className="uppercase font-bold text-[10px]">
+                    {act.category}
+                  </Badge>
+                  <span className="text-[11px] font-mono text-slate-400">{act.activityDate}</span>
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 leading-snug">
+                  {act.title}
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
+                  {act.description}
+                </p>
+              </div>
+              <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span className="truncate">📍 {act.location}</span>
+                <span className="text-emerald-600 font-bold">Terverifikasi</span>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </section>
 
       {/* ========================================================================= */}
       {/* MODAL: TAMBAH / EDIT ARTIKEL EDUKASI (MODAL DIALOG)                       */}

@@ -30,7 +30,7 @@ export default function SiswaLayout({
 
     const role = normalizeRole(String(user.role));
     if (role !== 'SISWA') {
-      if (role === 'ADMIN' || role === 'GURU') {
+      if (role === 'ADMIN' || role === 'KADER' || (role as string) === 'GURU') {
         router.push('/kader/dashboard');
       } else {
         router.push('/login?reason=unauthorized');
