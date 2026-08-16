@@ -473,22 +473,22 @@ export default function HomePage() {
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
             Didukung Oleh Lembaga & Institusi Mitra
           </span>
-          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10">
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
             {partnerLogos.map(logo => (
               <div
                 key={logo.name}
-                className="flex items-center gap-2.5 bg-white px-3.5 py-2 rounded-xl border border-slate-200/80 shadow-2xs hover:scale-105 transition-transform"
+                title={logo.name}
+                className="flex items-center justify-center bg-white p-2.5 sm:p-3 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-sm hover:scale-105 transition-all w-20 h-14 sm:w-24 sm:h-16 shrink-0 group"
               >
-                <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0">
+                <div className="relative w-full h-full">
                   <Image
                     src={logo.src}
                     alt={logo.name}
                     fill
                     className="object-contain"
-                    sizes="32px"
+                    sizes="96px"
                   />
                 </div>
-                <span className="text-xs font-bold text-slate-800">{logo.name}</span>
               </div>
             ))}
           </div>
