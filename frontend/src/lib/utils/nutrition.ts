@@ -1,5 +1,5 @@
 /**
- * WHO Anthro Plus Nutritional Status Standards & Visual Token Resolvers
+ * Standar WHO Nutritional Status Standards & Visual Token Resolvers
  * 
  * WHO Classification for Adolescents (5-19 years):
  * - Severely Thinness: < -3 SD

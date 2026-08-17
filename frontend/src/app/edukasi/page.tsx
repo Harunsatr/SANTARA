@@ -27,7 +27,7 @@ export default function PublicEducationPage() {
   const [loadingArticles, setLoadingArticles] = useState(true);
   const [articleCategory, setArticleCategory] = useState<string>('ALL');
 
-  // Interactive Digital CAGAR State
+  // Interactive Education State
   const [gender, setGender] = useState<'L' | 'P'>('P');
   const [selectedIronSource, setSelectedIronSource] = useState<string>('hati');
   const [selectedDrink, setSelectedDrink] = useState<string>('jeruk');
@@ -87,7 +87,7 @@ export default function PublicEducationPage() {
   const currentDrink = drinkDatabase[selectedDrink] || drinkDatabase.jeruk;
   const dailyTargetMg = gender === 'P' ? 15 : 11;
 
-  const gejala5L = [
+  const gejalaAnemia = [
     { title: 'Lesu', desc: 'Tubuh terasa lunglai dan enggan beraktivitas fisik.' },
     { title: 'Letih', desc: 'Cepat merasa lelah meskipun hanya melakukan aktivitas ringan.' },
     { title: 'Lemah', desc: 'Kekuatan otot menurun, sering merasa pusing atau kunang-kunang.' },
@@ -104,21 +104,21 @@ export default function PublicEducationPage() {
           <span>Pusat Edukasi Kesehatan Remaja SMA</span>
         </div>
         <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight font-display">
-          Ketahui Anemia, Cegah Gejala 5L & Optimalkan Prestasi
+          Ketahui Anemia, Cegah Gejala & Optimalkan Prestasi
         </h1>
         <p className="text-xs sm:text-base text-slate-600 leading-relaxed font-sans">
-          Anemia defisiensi besi merupakan masalah gizi utama pada remaja, terutama remaja putri karena menstruasi bulanan. Pahami faktor penyebab, asupan gizi seimbang, dan simulasi media <strong>CAGAR Digital</strong> di bawah ini.
+          Anemia defisiensi besi merupakan masalah gizi utama pada remaja, terutama remaja putri karena menstruasi bulanan. Pahami faktor penyebab, asupan gizi seimbang, dan simulasi kebutuhan zat besi di bawah ini.
         </p>
       </section>
 
-      {/* 2. GEJALA 5L & ANATOMI ANEMIA */}
+      {/* 2. GEJALA ANEMIA */}
       <section className="flex flex-col gap-6">
         <div className="flex flex-col gap-1 text-center sm:text-left">
           <Badge variant="danger" className="w-fit mx-auto sm:mx-0">
             Waspadai Bahaya
           </Badge>
           <h2 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight font-display">
-            Tanda & Gejala 5L pada Remaja Sekolah
+            Tanda & Gejala Anemia pada Remaja Sekolah
           </h2>
           <p className="text-xs sm:text-sm text-slate-600">
             Kadar hemoglobin (Hb) normal remaja putri adalah ≥ 12.0 g/dL dan remaja putra ≥ 13.0 g/dL. Jika kadar Hb rendah, pasokan oksigen ke otak dan jaringan tubuh menurun drastis.
@@ -126,13 +126,13 @@ export default function PublicEducationPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {gejala5L.map((item, idx) => (
+          {gejalaAnemia.map((item, idx) => (
             <Card
               key={item.title}
               className="p-5 flex flex-col gap-2 border-rose-100 bg-gradient-to-b from-rose-50/40 to-white hover:border-rose-300 transition-all shadow-2xs"
             >
               <div className="w-9 h-9 rounded-xl bg-rose-500 text-white font-black text-sm flex items-center justify-center shrink-0">
-                5L.{idx + 1}
+                {idx + 1}
               </div>
               <h3 className="text-base font-bold text-slate-900 mt-1">{item.title}</h3>
               <p className="text-xs text-slate-600 leading-relaxed">{item.desc}</p>
@@ -141,19 +141,19 @@ export default function PublicEducationPage() {
         </div>
       </section>
 
-      {/* 3. MEDIA EDUKASI ANEMIA CAGAR (CAKRAM GIZI ANEMIA REMAJA) */}
+      {/* 3. MEDIA EDUKASI ANEMIA */}
       <section className="p-6 sm:p-10 rounded-3xl bg-gradient-to-br from-sky-900 via-sky-950 to-slate-900 text-white border border-sky-800 shadow-xl flex flex-col gap-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-sky-800/80 pb-6">
           <div className="flex flex-col gap-1">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-bold uppercase tracking-wider w-fit">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Media Edukasi Fisik &amp; Simulasi</span>
+              <span>Media Edukasi Anemia</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-white font-display">
-              Media Edukasi Anemia CAGAR (Cakram Gizi Anemia Remaja)
+              Media Edukasi Anemia
             </h2>
             <p className="text-xs sm:text-sm text-sky-200/80 max-w-2xl">
-              Cakram putar edukasi pencegahan anemia yang memuat klasifikasi kadar Hb menurut jenis kelamin, penyebab anemia, sumber makanan kaya zat besi (heme &amp; non-heme), serta faktor pendukung dan penghambat absorpsi zat besi.
+              Media edukasi pencegahan anemia yang memuat klasifikasi kadar Hb menurut jenis kelamin, penyebab anemia, sumber makanan kaya zat besi (heme &amp; non-heme), serta faktor pendukung dan penghambat absorpsi zat besi. Media fisik dapat digunakan dalam kegiatan edukasi langsung di sekolah.
             </p>
           </div>
           <Button
@@ -196,7 +196,7 @@ export default function PublicEducationPage() {
               Spesifikasi Fisik Media
             </span>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Cakram putar ganda berbahan <strong>Artpaper 310 gsm</strong> dengan diameter piringan dalam 12,5 cm dan piringan luar 11,5 cm.
+              Media edukasi putar fisik berbahan <strong>Artpaper 310 gsm</strong> dengan diameter piringan dalam 12,5 cm dan piringan luar 11,5 cm.
             </p>
           </div>
         </div>
@@ -425,15 +425,15 @@ export default function PublicEducationPage() {
         </Card>
       </section>
 
-      {/* 5. ARTIKEL EDUKASI DARI DATABASE */}
+      {/* 5. ARTIKEL UMUM DARI DATABASE */}
       <section className="flex flex-col gap-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
             <Badge variant="primary" className="w-fit">
-              Materi Edukasi UKS
+              Artikel Umum
             </Badge>
             <h2 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight font-display">
-              Artikel & Panduan Kesehatan Remaja
+              Artikel Umum
             </h2>
           </div>
 
@@ -456,10 +456,10 @@ export default function PublicEducationPage() {
         </div>
 
         {loadingArticles ? (
-          <LoadingState variant="card" rows={3} text="Memuat artikel edukasi..." />
+          <LoadingState variant="card" rows={3} text="Memuat artikel umum..." />
         ) : filteredArticles.length === 0 ? (
           <div className="text-center py-12 p-6 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-xs text-slate-500">
-            Belum ada artikel edukasi yang dipublikasikan untuk kategori ini.
+            Belum ada artikel umum yang dipublikasikan untuk kategori ini.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -504,7 +504,7 @@ export default function PublicEducationPage() {
             Panduan Terpadu UKS: Pengukuran Status Gizi dan Skrining Kesehatan Remaja di Sekolah Menengah Atas
           </h2>
           <p className="text-xs text-slate-300 leading-relaxed">
-            Format resmi pedoman teknis pengukuran antropometri (TB, BB, IMT/U WHO Anthro Plus), kalibrasi alat ukur, skrining Hb, serta tata laksana kepatuhan konsumsi TTD bagi tim UKS sekolah.
+            Format resmi pedoman teknis pengukuran antropometri (TB, BB, IMT/U Standar WHO), kalibrasi alat ukur, skrining Hb, serta tata laksana kepatuhan konsumsi TTD bagi tim UKS sekolah.
           </p>
         </div>
 
@@ -521,7 +521,7 @@ export default function PublicEducationPage() {
               className="w-full sm:w-auto font-bold bg-emerald-600 hover:bg-emerald-700 shadow-md text-xs sm:text-sm"
               rightIcon={<BookOpen className="w-4 h-4" />}
             >
-              Lihat &amp; Unduh Panduan PDF
+              Download Materi
             </Button>
           </a>
         </div>

@@ -506,7 +506,7 @@ export default function StatusGiziPage() {
               Riwayat Antropometri & Status Gizi ({filteredExaminations.length})
             </CardTitle>
             <CardDescription className="text-xs text-slate-500 mt-0.5">
-              Data pemeriksaan fisik siswa berstandar WHO Anthro Plus dan adapter LiLA.
+              Data pemeriksaan fisik siswa berstandar Standar WHO dan adapter LiLA.
             </CardDescription>
           </div>
         </CardHeader>

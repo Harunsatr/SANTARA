@@ -151,7 +151,7 @@ export default function SiswaDashboardPage() {
               leftIcon={<BookOpen className="w-4 h-4" />}
               className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs font-bold"
             >
-              Edukasi CAGAR
+              Media Edukasi Anemia
             </Button>
           </Link>
         </div>
@@ -233,7 +233,7 @@ export default function SiswaDashboardPage() {
 
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col gap-1">
                   <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
-                    Status Gizi (WHO Anthro Plus)
+                    Status Gizi (Standar WHO)
                   </span>
                   <div className="mt-1">
                     <Badge variant="nutrition" nutritionStatus={latestExam.nutrional_status} dot size="sm" />

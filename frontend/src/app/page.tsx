@@ -91,11 +91,9 @@ export default function HomePage() {
 
   const partnerLogos = [
     { name: 'BIMA Kemendikbudristek', src: '/Logo/LogoBima.jpeg' },
-    { name: 'FIK Universitas Negeri Malang', src: '/Logo/LogoFIK.jpeg' },
-    { name: 'SDGs 2: Zero Hunger', src: '/Logo/LogoSdgs2.jpeg' },
-    { name: 'SDGs 4: Quality Education', src: '/Logo/LogoSdgs4.jpeg' },
-    { name: 'SMAN 1 Kota Batu', src: '/Logo/LogoSMABATU.jpeg' },
     { name: 'Universitas Negeri Malang', src: '/Logo/LogoUM.jpeg' },
+    { name: 'FIK Universitas Negeri Malang', src: '/Logo/LogoFIK.jpeg' },
+    { name: 'SMAN 1 Kota Batu', src: '/Logo/LogoSMABATU.jpeg' },
   ];
 
   return (
@@ -147,7 +145,7 @@ export default function HomePage() {
                   className="w-full sm:w-auto text-sm sm:text-base font-bold bg-white/10 hover:bg-white/20 text-white border-white/20"
                   leftIcon={<BookOpen className="w-4 h-4" />}
                 >
-                  Edukasi Anemia & CAGAR
+                  Media Edukasi Anemia
                 </Button>
               </Link>
 
@@ -205,36 +203,36 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. PROGRAM OVERVIEW & TRIAS UKS MODERN */}
+      {/* 2. PROGRAM OVERVIEW & PENDIDIKAN KESEHATAN */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-10">
           <div className="text-center max-w-2xl mx-auto flex flex-col gap-2">
             <Badge variant="primary" className="mx-auto">
-              Fondasi Program
+              Pendidikan Kesehatan
             </Badge>
             <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight font-display">
-              Tiga Pilar Intervensi Kesehatan Terpadu (TRIAS UKS)
+              Fokus Pendidikan & Pemantauan Kesehatan Remaja
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Mengintegrasikan Trias UKS dengan inovasi teknologi digital untuk menciptakan ekosistem sekolah sehat, sadar gizi, dan bebas anemia.
+              Program intervensi terpadu untuk menciptakan lingkungan sekolah sehat, sadar gizi seimbang, dan bebas anemia melalui edukasi dan pemantauan berkala.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Pillar 1 */}
+            {/* Focus 1 */}
             <Card className="p-6 flex flex-col gap-4 border-slate-200/80 hover:border-sky-300 hover:shadow-md transition-all group">
               <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center group-hover:bg-sky-600 group-hover:text-white transition-colors shrink-0">
                 <BookOpen className="w-6 h-6" />
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-bold text-sky-600 uppercase tracking-wider">
-                  Pilar 1 • Pendidikan Kesehatan
+                  Edukasi Kesehatan
                 </span>
                 <h3 className="text-lg font-bold text-slate-900">
-                  Edukasi Gizi & Cakram CAGAR
+                  Pendidikan & Edukasi Anemia
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Penyuluhan interaktif mengenai pencegahan anemia, klasifikasi anemia menurut jenis kelamin, gejala 5L, dan pemanfaatan media edukasi <strong>CAGAR (Cakram Gizi Anemia Remaja)</strong>.
+                  Penyuluhan interaktif mengenai pencegahan anemia, klasifikasi anemia menurut jenis kelamin, tanda gejala anemia, dan pemanfaatan media edukasi anemia.
                 </p>
               </div>
               <div className="mt-auto pt-2">
@@ -242,26 +240,26 @@ export default function HomePage() {
                   href="/edukasi"
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-600 hover:text-sky-700"
                 >
-                  <span>Pelajari Media CAGAR</span>
+                  <span>Pelajari Media Edukasi</span>
                   <ChevronRight className="w-4 h-4" />
                 </Link>
               </div>
             </Card>
 
-            {/* Pillar 2 */}
+            {/* Focus 2 */}
             <Card className="p-6 flex flex-col gap-4 border-slate-200/80 hover:border-emerald-300 hover:shadow-md transition-all group">
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors shrink-0">
                 <Activity className="w-6 h-6" />
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">
-                  Pilar 2 • Pelayanan Kesehatan
+                  Pemantauan Fisik
                 </span>
                 <h3 className="text-lg font-bold text-slate-900">
-                  Antropometri & Skrining Klinis
+                  Antropometri & Skrining Kesehatan
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Pengukuran antropometri (TB, BB, IMT/U WHO Anthro Plus), pengukuran Lingkar Lengan Atas (LiLA), serta skrining hemoglobin (Hb) dan tekanan darah berkala oleh kader SATRIA.
+                  Pengukuran antropometri (TB, BB, IMT/U Standar WHO), Lingkar Lengan Atas (LiLA), serta skrining hemoglobin (Hb) dan tekanan darah berkala oleh kader SATRIA.
                 </p>
               </div>
               <div className="mt-auto pt-2">
@@ -275,20 +273,20 @@ export default function HomePage() {
               </div>
             </Card>
 
-            {/* Pillar 3 */}
+            {/* Focus 3 */}
             <Card className="p-6 flex flex-col gap-4 border-slate-200/80 hover:border-rose-300 hover:shadow-md transition-all group">
               <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center group-hover:bg-rose-600 group-hover:text-white transition-colors shrink-0">
                 <Pill className="w-6 h-6" />
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-bold text-rose-600 uppercase tracking-wider">
-                  Pilar 3 • Pembinaan Lingkungan Sehat
+                  Suplementasi
                 </span>
                 <h3 className="text-lg font-bold text-slate-900">
                   Kepatuhan Tablet Tambah Darah
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Gerakan Aksi Bergizi mingguan melalui konsumsi TTD bersama bagi remaja putri, dipantau secara digital dan dicatat dalam kartu rekam fisik <strong>JAKRA</strong>.
+                  Gerakan konsumsi Tablet Tambah Darah (TTD) mingguan bagi remaja putri, dipantau secara digital dan dicatat dalam kartu rekam fisik <strong>JAKRA</strong>.
                 </p>
               </div>
               <div className="mt-auto pt-2">
@@ -325,7 +323,7 @@ export default function HomePage() {
             <ul className="text-xs sm:text-sm text-slate-300 space-y-2 leading-relaxed">
               <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <span>Melakukan pengukuran status gizi antropometri (TB, BB, IMT/U) dan LiLA secara akurat.</span>
+                <span>Melakukan pengukuran status gizi antropometri (TB, BB, IMT/U Standar WHO) dan LiLA secara akurat.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
@@ -375,22 +373,22 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* CAGAR */}
+            {/* Media Edukasi Anemia */}
             <Card className="p-6 bg-gradient-to-b from-sky-50/50 to-white border-sky-100 flex flex-col justify-between">
               <div>
                 <div className="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center font-black text-sm mb-3">
                   1
                 </div>
                 <h3 className="text-base font-bold text-slate-900 mb-1">
-                  CAGAR — Cakram Gizi Anemia Remaja
+                  Media Edukasi Anemia
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Media edukasi komprehensif pencegahan anemia berbahan Artpaper 310 gsm (diameter 12,5 & 11,5 cm) yang memuat klasifikasi anemia per jenis kelamin, penyebab anemia, dan sumber pangan kaya zat besi.
+                  Media edukasi komprehensif pencegahan anemia yang memuat klasifikasi anemia per jenis kelamin, faktor penyebab anemia, serta panduan asupan pangan kaya zat besi.
                 </p>
               </div>
               <div className="mt-4 pt-3 border-t border-sky-100">
                 <Link href="/edukasi" className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1">
-                  <span>Pelajari Media CAGAR</span>
+                  <span>Pelajari Media Edukasi</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
@@ -437,7 +435,7 @@ export default function HomePage() {
                   rel="noopener noreferrer"
                   className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
                 >
-                  <span>Lihat Panduan PDF</span>
+                  <span>Download Materi</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </a>
               </div>
@@ -453,7 +451,7 @@ export default function HomePage() {
                   Platform Website SANTARA
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Database kesehatan digital terintegrasi untuk pencatatan status gizi (WHO Anthro Plus), skrining klinis, pemantauan TTD real-time per kelas, dan portal edukasi.
+                  Database kesehatan digital terintegrasi untuk pencatatan status gizi (Standar WHO), skrining klinis, pemantauan TTD real-time per kelas, dan portal edukasi.
                 </p>
               </div>
               <div className="mt-4 pt-3 border-t border-indigo-100">

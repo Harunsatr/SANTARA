@@ -42,10 +42,10 @@ export const OFFICIAL_PROGRAM_ACTIVITIES: ActivityPhoto[] = [
   },
   {
     id: 'ACT002',
-    title: 'Penyusunan Media Edukasi CAGAR & Kartu JAKRA',
+    title: 'Penyusunan Media Edukasi Anemia & Kartu JAKRA',
     category: 'kader',
     activityDate: '2024-07-28',
-    description: 'Finalisasi desain cakram edukasi anemia CAGAR dan kartu rekam kesehatan fisik JAKRA.',
+    description: 'Finalisasi desain media edukasi anemia dan kartu rekam kesehatan fisik JAKRA.',
     location: 'Laboratorium FIK UM',
   },
   {
@@ -58,7 +58,7 @@ export const OFFICIAL_PROGRAM_ACTIVITIES: ActivityPhoto[] = [
   },
   {
     id: 'ACT004',
-    title: 'Workshop II — Praktik Pengukuran Antropometri & WHO Anthro Plus',
+    title: 'Workshop II — Praktik Pengukuran Antropometri & Standar WHO',
     category: 'pengukuran',
     activityDate: '2024-08-12',
     description: 'Pelatihan teknis pengukuran tinggi badan, berat badan, LiLA, dan evaluasi IMT/U.',

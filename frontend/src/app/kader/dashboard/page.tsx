@@ -223,15 +223,15 @@ export default function KaderDashboardPage() {
             />
           </section>
 
-          {/* 3. WHO ANTHRO PLUS & QUICK ACTIONS */}
+          {/* 3. STANDAR WHO & QUICK ACTIONS */}
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* WHO Nutrition Breakdown Card */}
+            {/* Standar WHO Nutrition Breakdown Card */}
             <Card className="lg:col-span-8 p-6 sm:p-8 flex flex-col gap-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-2">
                   <Activity className="w-5 h-5 text-sky-600" />
                   <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                    Distribusi Status Gizi Siswa (WHO Anthro Plus)
+                    Distribusi Status Gizi Siswa (Standar WHO)
                   </h2>
                 </div>
                 <Badge variant="neutral">
@@ -417,7 +417,7 @@ export default function KaderDashboardPage() {
                       <th className="px-4 py-3 sm:px-6">BB (kg)</th>
                       <th className="px-4 py-3 sm:px-6">TB (cm)</th>
                       <th className="px-4 py-3 sm:px-6">IMT</th>
-                      <th className="px-4 py-3 sm:px-6">Status Gizi (WHO)</th>
+                      <th className="px-4 py-3 sm:px-6">Status Gizi (Standar WHO)</th>
                       <th className="px-4 py-3 sm:px-6">LiLA / Catatan</th>
                     </tr>
                   </thead>

@@ -320,10 +320,10 @@ export default function EdukasiKelolaPage() {
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                Kelola Artikel Edukasi Kesehatan
+                Kelola Artikel Umum
               </h1>
               <p className="text-sm text-slate-500 mt-0.5">
-                Pusat manajemen materi edukasi gizi, anemia, dan panduan kesehatan UKS sekolah.
+                Pusat manajemen artikel edukasi gizi, anemia, dan panduan kesehatan UKS sekolah.
               </p>
             </div>
           </div>
@@ -481,7 +481,7 @@ export default function EdukasiKelolaPage() {
         <CardHeader className="p-4 sm:p-5 border-b border-slate-100 flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-lg font-bold text-slate-900">
-              Daftar Artikel Edukasi ({filteredArticles.length})
+              Daftar Artikel Umum ({filteredArticles.length})
             </CardTitle>
             <CardDescription className="text-xs text-slate-500 mt-0.5">
               Kelola materi edukasi kesehatan, gizi seimbang, dan suplemen TTD.
@@ -684,8 +684,8 @@ export default function EdukasiKelolaPage() {
         onClose={() => {
           if (!isSubmitting) setIsFormModalOpen(false);
         }}
-        title={editingArticle ? `Edit Artikel: ${editingArticle.title}` : 'Tulis Artikel Edukasi Baru'}
-        description="Materi edukasi akan otomatis tersimpan ke spreadsheet 08_EDUCATIONS dan tampil di portal edukasi."
+        title={editingArticle ? `Edit Artikel: ${editingArticle.title}` : 'Tulis Artikel Umum Baru'}
+        description="Artikel akan otomatis tersimpan ke spreadsheet 08_EDUCATIONS dan tampil di portal edukasi."
         maxWidth="lg"
       >
         <form onSubmit={handleSubmitArticle} className="space-y-4 pt-2">

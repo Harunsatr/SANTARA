@@ -24,7 +24,7 @@ export function SiswaNavbar() {
 
   const navLinks = [
     { href: '/siswa/dashboard', label: 'Ringkasan Kesehatan', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { href: '/edukasi', label: 'Edukasi Anemia (CAGAR)', icon: <BookOpen className="w-4 h-4" /> },
+    { href: '/edukasi', label: 'Media Edukasi Anemia', icon: <BookOpen className="w-4 h-4" /> },
     { href: '/grafik', label: 'Grafik Sekolah', icon: <BarChart3 className="w-4 h-4" /> },
   ];
 

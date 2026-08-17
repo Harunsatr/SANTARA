@@ -9,7 +9,7 @@ import {
   ErrorState,
   Alert,
 } from '@/components/ui';
-import { fetchExaminations, fetchClasses } from '@/lib/api';
+import { fetchExaminations, fetchClasses, fetchTTD } from '@/lib/api';
 import { filterValidClasses } from '@/lib/adapters';
 import { normalizeNutritionStatus, NUTRITION_STYLES } from '@/lib/utils/nutrition';
 import { calculatePercentage } from '@/lib/utils/number';
@@ -21,8 +21,10 @@ import {
   Layers,
   PieChart,
   Users,
+  Pill,
+  CheckCircle2,
 } from 'lucide-react';
-import { Examination, ClassRoom } from '@/types/models';
+import { Examination, ClassRoom, TTDRecord } from '@/types/models';
 
 interface GradeNutritionAggregate {
   gradeLabel: string;
@@ -41,12 +43,24 @@ interface GradeNutritionAggregate {
   };
 }
 
+interface ClassTTDAggregate {
+  classId: string;
+  className: string;
+  grade: string;
+  totalLogged: number;
+  consumedCount: number;
+  complianceRate: number;
+}
+
 export default function PublicGrafikPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeGrade, setActiveGrade] = useState<string>('ALL');
 
-  // Aggregated Data State (Strictly Non-Personal)
+  // Dynamic Grade List from Database
+  const [availableGrades, setAvailableGrades] = useState<string[]>(['10', '11', '12']);
+
+  // Aggregated Nutrition Data State (Strictly Non-Personal)
   const [overallAggregate, setOverallAggregate] = useState<GradeNutritionAggregate>({
     gradeLabel: 'Seluruh Siswa',
     total: 0,
@@ -59,6 +73,12 @@ export default function PublicGrafikPage() {
   });
 
   const [gradeAggregates, setGradeAggregates] = useState<Record<string, GradeNutritionAggregate>>({});
+
+  // Aggregated TTD Compliance Data State
+  const [classTTDAggregates, setClassTTDAggregates] = useState<ClassTTDAggregate[]>([]);
+  const [totalTTDConsumed, setTotalTTDConsumed] = useState<number>(0);
+  const [totalClassesCount, setTotalClassesCount] = useState<number>(0);
+
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
@@ -66,9 +86,10 @@ export default function PublicGrafikPage() {
 
     async function loadAndAggregate() {
       try {
-        const [examsRes, classesRes] = await Promise.all([
+        const [examsRes, classesRes, ttdRes] = await Promise.all([
           fetchExaminations(),
           fetchClasses(),
+          fetchTTD(),
         ]);
 
         if (!ignore) {
@@ -81,22 +102,35 @@ export default function PublicGrafikPage() {
           const exams: Examination[] = examsRes.data || [];
           const rawClasses: ClassRoom[] = classesRes.success ? classesRes.data : [];
           const validClasses = filterValidClasses(rawClasses);
+          const ttdRecords: TTDRecord[] = ttdRes.success ? ttdRes.data : [];
 
-          // Map class ID to grade level ("10", "11", "12")
+          // Map class ID to grade level and class name
           const classGradeMap = new Map<string, string>();
+          const classNameMap = new Map<string, string>();
+          const detectedGrades = new Set<string>();
+
           validClasses.forEach(c => {
             if (c.id) {
-              classGradeMap.set(c.id, String(c.grade || '10'));
+              const gr = String(c.grade || '10');
+              classGradeMap.set(c.id, gr);
+              classNameMap.set(c.id, c.class_name || `Kelas ${c.grade}`);
+              detectedGrades.add(gr);
             }
           });
 
-          // Compute Overall and Grade-Level Aggregates
+          // Sort available grades dynamically
+          const sortedGrades = Array.from(detectedGrades).sort((a, b) => Number(a) - Number(b));
+          if (sortedGrades.length > 0) {
+            setAvailableGrades(sortedGrades);
+          }
+
+          // 1. Compute Overall and Grade-Level Nutrition Aggregates
           const overallCounts = { severelyThinness: 0, thinness: 0, normal: 0, overweight: 0, obese: 0, total: 0 };
-          const byGrade: Record<string, typeof overallCounts> = {
-            '10': { severelyThinness: 0, thinness: 0, normal: 0, overweight: 0, obese: 0, total: 0 },
-            '11': { severelyThinness: 0, thinness: 0, normal: 0, overweight: 0, obese: 0, total: 0 },
-            '12': { severelyThinness: 0, thinness: 0, normal: 0, overweight: 0, obese: 0, total: 0 },
-          };
+          const byGrade: Record<string, typeof overallCounts> = {};
+
+          sortedGrades.forEach(g => {
+            byGrade[g] = { severelyThinness: 0, thinness: 0, normal: 0, overweight: 0, obese: 0, total: 0 };
+          });
 
           exams.forEach(exam => {
             const status = normalizeNutritionStatus(exam.nutrional_status);
@@ -126,7 +160,7 @@ export default function PublicGrafikPage() {
             }
           });
 
-          // Build immutable aggregate records
+          // Helper to build aggregate record
           const makeAggregate = (label: string, counts: typeof overallCounts): GradeNutritionAggregate => ({
             gradeLabel: label,
             total: counts.total,
@@ -145,11 +179,48 @@ export default function PublicGrafikPage() {
           });
 
           setOverallAggregate(makeAggregate('Seluruh Siswa', overallCounts));
-          setGradeAggregates({
-            '10': makeAggregate('Kelas 10', byGrade['10'] || overallCounts),
-            '11': makeAggregate('Kelas 11', byGrade['11'] || overallCounts),
-            '12': makeAggregate('Kelas 12', byGrade['12'] || overallCounts),
+
+          const builtGradeAggregates: Record<string, GradeNutritionAggregate> = {};
+          sortedGrades.forEach(g => {
+            builtGradeAggregates[g] = makeAggregate(`Kelas ${g}`, byGrade[g] || overallCounts);
           });
+          setGradeAggregates(builtGradeAggregates);
+
+          // 2. Compute Pure Non-Personal Aggregated TTD Data per Class
+          const ttdByClass: Record<string, { totalLogged: number; consumedCount: number }> = {};
+          validClasses.forEach(c => {
+            ttdByClass[c.id] = { totalLogged: 0, consumedCount: 0 };
+          });
+
+          let totalConsumed = 0;
+          ttdRecords.forEach(rec => {
+            const isConsumed = rec.consumed === true || rec.consumed === 'TRUE' || rec.consumed === 'true' || Number(rec.consumed) === 1;
+            if (rec.class_id && ttdByClass[rec.class_id]) {
+              ttdByClass[rec.class_id].totalLogged++;
+              if (isConsumed) {
+                ttdByClass[rec.class_id].consumedCount++;
+              }
+            }
+            if (isConsumed) {
+              totalConsumed++;
+            }
+          });
+
+          const classAggregatesList: ClassTTDAggregate[] = validClasses.map(c => {
+            const data = ttdByClass[c.id] || { totalLogged: 0, consumedCount: 0 };
+            return {
+              classId: c.id,
+              className: c.class_name || `Kelas ${c.grade}`,
+              grade: String(c.grade || '10'),
+              totalLogged: data.totalLogged,
+              consumedCount: data.consumedCount,
+              complianceRate: calculatePercentage(data.consumedCount, data.totalLogged),
+            };
+          });
+
+          setClassTTDAggregates(classAggregatesList);
+          setTotalTTDConsumed(totalConsumed);
+          setTotalClassesCount(validClasses.length);
 
           setError(null);
           setLoading(false);
@@ -183,7 +254,7 @@ export default function PublicGrafikPage() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex flex-col gap-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex flex-col gap-10 sm:gap-14">
       {/* 1. HEADER & PRIVACY NOTICE */}
       <section className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex flex-col gap-2 max-w-2xl">
@@ -195,7 +266,7 @@ export default function PublicGrafikPage() {
             Grafik Distribusi Status Gizi Remaja SMA
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-sans">
-            Visualisasi distribusi status gizi siswa berdasarkan standar antropometri <strong>WHO Anthro Plus (IMT/U)</strong>. Data disajikan secara agregat untuk menjaga privasi medis siswa.
+            Visualisasi distribusi status gizi siswa berdasarkan <strong>Standar WHO (IMT/U)</strong> dan data kepatuhan konsumsi Tablet Tambah Darah (TTD). Data disajikan secara agregat untuk menjaga privasi medis siswa.
           </p>
         </div>
 
@@ -219,29 +290,27 @@ export default function PublicGrafikPage() {
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-sky-600 shrink-0" />
           <span>
-            Halaman publik ini hanya menerima ringkasan agregasi sekolah dan tingkat kelas. Tidak ada nama, nomor induk, atau riwayat pemeriksaan perorangan yang dipublikasikan.
+            Halaman publik ini hanya menampilkan ringkasan statistik agregasi sekolah dan per kelas. Tidak ada nama, nomor induk, atau riwayat pemeriksaan perorangan yang dipublikasikan.
           </span>
         </div>
       </Alert>
 
       {loading ? (
-        <LoadingState variant="table" rows={5} text="Menghitung agregasi statistik status gizi..." />
+        <LoadingState variant="table" rows={5} text="Menghitung agregasi statistik status gizi dan TTD..." />
       ) : error ? (
         <ErrorState message={error} onRetry={() => setRefreshTrigger(prev => prev + 1)} />
       ) : (
         <>
-          {/* 3. GRADE LEVEL TABS */}
-          <div className="flex items-center gap-2 p-1.5 bg-slate-200/80 rounded-2xl w-fit">
+          {/* 3. DYNAMIC GRADE LEVEL TABS */}
+          <div className="flex items-center gap-2 p-1.5 bg-slate-200/80 rounded-2xl w-fit overflow-x-auto max-w-full">
             {[
               { id: 'ALL', label: 'Seluruh Siswa' },
-              { id: '10', label: 'Kelas 10' },
-              { id: '11', label: 'Kelas 11' },
-              { id: '12', label: 'Kelas 12' },
+              ...availableGrades.map(g => ({ id: g, label: `Kelas ${g}` })),
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveGrade(tab.id)}
-                className={`px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all ${
+                className={`px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all shrink-0 ${
                   activeGrade === tab.id
                     ? 'bg-white text-slate-900 shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
@@ -294,7 +363,7 @@ export default function PublicGrafikPage() {
               {/* Grouped Horizontal Breakdown Bars */}
               <div className="flex flex-col gap-4 mt-2">
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Rincian Kategori WHO Anthro Plus
+                  Rincian Kategori Standar WHO
                 </span>
 
                 <div className="flex flex-col gap-3.5">
@@ -361,12 +430,12 @@ export default function PublicGrafikPage() {
                 </p>
               </Card>
 
-              {/* WHO Standard Info Card */}
+              {/* Standar WHO Info Card */}
               <Card className="p-6 flex flex-col gap-3">
                 <div className="flex items-center gap-2 text-slate-800">
                   <Info className="w-4 h-4 text-sky-600" />
                   <h4 className="text-xs font-bold uppercase tracking-wider">
-                    Standar WHO Anthro Plus Remaja
+                    Standar WHO Remaja
                   </h4>
                 </div>
                 <p className="text-xs text-slate-500 leading-relaxed">
@@ -377,11 +446,11 @@ export default function PublicGrafikPage() {
           </div>
 
           {/* 5. DATA TABLE AGREGAT PER TINGKAT KELAS */}
-          <section className="flex flex-col gap-4 mt-4">
+          <section className="flex flex-col gap-4 mt-2">
             <div className="flex items-center gap-2">
               <Layers className="w-5 h-5 text-sky-600" />
               <h3 className="text-lg font-bold text-slate-900">
-                Tabel Perbandingan Status Gizi Antar Tingkat Kelas
+                Tabel Perbandingan Status Gizi Antar Tingkat Kelas (Standar WHO)
               </h3>
             </div>
 
@@ -399,7 +468,7 @@ export default function PublicGrafikPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {['10', '11', '12'].map(gr => {
+                  {availableGrades.map(gr => {
                     const row = gradeAggregates[gr];
                     if (!row) return null;
                     return (
@@ -425,6 +494,118 @@ export default function PublicGrafikPage() {
                     <td className="px-4 py-3 sm:px-6 text-emerald-600">{overallAggregate.normal} ({overallAggregate.percentages.normal}%)</td>
                     <td className="px-4 py-3 sm:px-6">{overallAggregate.overweight} ({overallAggregate.percentages.overweight}%)</td>
                     <td className="px-4 py-3 sm:px-6">{overallAggregate.obese} ({overallAggregate.percentages.obese}%)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* 6. MODUL KEPATUHAN KONSUMSI TABLET TAMBAH DARAH (TTD) — AGREGASI PUBLIK */}
+          <section className="flex flex-col gap-6 pt-4 border-t border-slate-200">
+            <div className="flex flex-col gap-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold uppercase tracking-wider w-fit">
+                <Pill className="w-3.5 h-3.5" />
+                <span>Kepatuhan Konsumsi Tablet Tambah Darah</span>
+              </div>
+              <h2 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight font-display">
+                Anjuran Minum Tablet Tambah Darah & Distribusi Agregat per Kelas
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-sans">
+                Data agregat kepatuhan konsumsi Tablet Tambah Darah (TTD) mingguan bagi remaja putri berdasarkan laporan pencatatan kelas. Data disajikan secara teragregasi per rombongan belajar tanpa membuka identitas siswa.
+              </p>
+            </div>
+
+            {/* Quick Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Card className="p-5 flex items-center gap-4 bg-gradient-to-br from-rose-50/60 to-white border-rose-100">
+                <div className="w-12 h-12 rounded-2xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <Pill className="w-6 h-6" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Diminum</span>
+                  <span className="text-2xl font-black text-slate-900">{totalTTDConsumed} Konsumsi</span>
+                  <span className="text-[11px] text-slate-400">Catatan kepatuhan TTD</span>
+                </div>
+              </Card>
+
+              <Card className="p-5 flex items-center gap-4 bg-gradient-to-br from-sky-50/60 to-white border-sky-100">
+                <div className="w-12 h-12 rounded-2xl bg-sky-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <Layers className="w-6 h-6" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Jumlah Kelas</span>
+                  <span className="text-2xl font-black text-slate-900">{totalClassesCount} Kelas</span>
+                  <span className="text-[11px] text-slate-400">Terdaftar di database</span>
+                </div>
+              </Card>
+
+              <Card className="p-5 flex items-center gap-4 bg-gradient-to-br from-emerald-50/60 to-white border-emerald-100">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Status Pemantauan</span>
+                  <span className="text-2xl font-black text-emerald-600">Aktif</span>
+                  <span className="text-[11px] text-slate-400">Dipantau berkala</span>
+                </div>
+              </Card>
+            </div>
+
+            {/* Distribution Grid Cards per Class */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {classTTDAggregates.map(cls => (
+                <Card key={cls.classId} className="p-5 flex flex-col gap-3 border-slate-200/80 hover:border-rose-300 transition-all">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900 text-sm">{cls.className}</span>
+                    <Badge variant={cls.consumedCount > 0 ? 'success' : 'neutral'} size="sm">
+                      {cls.consumedCount > 0 ? 'Tercatat' : 'Belum Ada Data'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-baseline justify-between border-t border-slate-100 pt-2 text-xs">
+                    <span className="text-slate-500">Jumlah Siswa Minum:</span>
+                    <span className="font-extrabold text-slate-900 text-sm">
+                      {cls.consumedCount} siswa sudah minum
+                    </span>
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            {/* Aggregate Table per Class */}
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-2xs">
+              <table className="w-full text-left text-xs sm:text-sm text-slate-700 border-collapse">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[11px]">
+                  <tr>
+                    <th className="px-4 py-3.5 sm:px-6">Kelas</th>
+                    <th className="px-4 py-3.5 sm:px-6">Tingkat</th>
+                    <th className="px-4 py-3.5 sm:px-6 text-rose-700">Jumlah Siswa Sudah Minum TTD</th>
+                    <th className="px-4 py-3.5 sm:px-6">Status Kepatuhan</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {classTTDAggregates.map(cls => (
+                    <tr key={cls.classId} className="hover:bg-slate-50/80">
+                      <td className="px-4 py-3 sm:px-6 font-bold text-slate-900">{cls.className}</td>
+                      <td className="px-4 py-3 sm:px-6">Kelas {cls.grade}</td>
+                      <td className="px-4 py-3 sm:px-6 font-extrabold text-rose-600">
+                        {cls.consumedCount} siswa sudah minum
+                      </td>
+                      <td className="px-4 py-3 sm:px-6">
+                        {cls.consumedCount > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Terdata ({cls.consumedCount} dosis)
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">Belum ada input</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="bg-slate-50 font-black text-slate-900 border-t-2 border-slate-200">
+                    <td className="px-4 py-3 sm:px-6" colSpan={2}>TOTAL KONSUMSI TTD SELURUH KELAS</td>
+                    <td className="px-4 py-3 sm:px-6 text-rose-600 font-black">{totalTTDConsumed} siswa sudah minum</td>
+                    <td className="px-4 py-3 sm:px-6 text-slate-700 font-bold">{totalClassesCount} Kelas Terdata</td>
                   </tr>
                 </tbody>
               </table>

@@ -27,10 +27,10 @@ export const metadata: Metadata = {
     'Status Gizi Remaja',
     'Anemia Remaja',
     'Tablet Tambah Darah',
-    'CAGAR',
+    'Media Edukasi Anemia',
     'JAKRA',
   ],
-  authors: [{ name: 'Tim Pengabdian Masyarakat UM & BIMA Kemendikbudristek' }],
+  authors: [{ name: 'Tim SANTARA' }],
 };
 
 export const viewport: Viewport = {
