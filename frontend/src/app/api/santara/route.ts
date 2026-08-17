@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const DEFAULT_GAS_API_URL =
+  'https://script.google.com/macros/s/AKfycby-x8OD8YHovfac2hf3R65WPGQYd1iR8lTDy06dafBzn9LFRPAjbEfYjZwiRzrE_AIayw/exec';
+
 const GAS_API_URL =
-  process.env.SANTARA_SERVER_API_URL ||
-  process.env.NEXT_PUBLIC_SANTARA_API_URL ||
-  '';
+  (process.env.SANTARA_SERVER_API_URL && process.env.SANTARA_SERVER_API_URL.trim() !== ''
+    ? process.env.SANTARA_SERVER_API_URL.trim()
+    : null) ||
+  (process.env.NEXT_PUBLIC_SANTARA_API_URL && process.env.NEXT_PUBLIC_SANTARA_API_URL.trim() !== ''
+    ? process.env.NEXT_PUBLIC_SANTARA_API_URL.trim()
+    : null) ||
+  DEFAULT_GAS_API_URL;
 
 /**
  * Server-side Proxy GET Handler

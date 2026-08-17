@@ -4,25 +4,31 @@
  * 
  * Features:
  * - Next.js internal server-side proxy route (/api/santara) to eliminate browser CORS & 302 redirect issues
+ * - Fallback to official Google Apps Script endpoint if proxy is unavailable
  * - Automatic retry with exponential backoff on transient network hiccups
  * - Clean error mapping and normalized response structure
  */
 
 import { ApiResult } from '@/types/api';
 
-const DIRECT_GAS_URL = '';
+export const DEFAULT_GAS_URL =
+  'https://script.google.com/macros/s/AKfycby-x8OD8YHovfac2hf3R65WPGQYd1iR8lTDy06dafBzn9LFRPAjbEfYjZwiRzrE_AIayw/exec';
+
+export const DIRECT_GAS_URL =
+  (process.env.NEXT_PUBLIC_SANTARA_API_URL && process.env.NEXT_PUBLIC_SANTARA_API_URL.trim() !== ''
+    ? process.env.NEXT_PUBLIC_SANTARA_API_URL.trim()
+    : null) ||
+  (process.env.SANTARA_SERVER_API_URL && process.env.SANTARA_SERVER_API_URL.trim() !== ''
+    ? process.env.SANTARA_SERVER_API_URL.trim()
+    : null) ||
+  DEFAULT_GAS_URL;
 
 export function getApiBaseUrl(): string {
   // In the browser, use the same-origin Next.js proxy route to prevent CORS / 302 errors
   if (typeof window !== 'undefined') {
     return '/api/santara';
   }
-
   // On the server, use direct GAS endpoint
-  const envUrl = process.env.NEXT_PUBLIC_SANTARA_API_URL;
-  if (envUrl && envUrl.trim() !== '') {
-    return envUrl.trim();
-  }
   return DIRECT_GAS_URL;
 }
 
@@ -30,6 +36,44 @@ export interface RequestOptions {
   timeoutMs?: number;
   cache?: RequestCache;
   retries?: number;
+}
+
+/**
+ * Helper to construct request URL safely without "Invalid URL" TypeError
+ */
+function buildRequestUrl(
+  targetBase: string,
+  action?: string,
+  params: Record<string, string | number | boolean | undefined | null> = {}
+): URL {
+  const isBrowser = typeof window !== 'undefined';
+  const origin = isBrowser && window.location.origin ? window.location.origin : 'http://localhost:3000';
+
+  const base = targetBase && targetBase.trim() !== '' ? targetBase.trim() : '/api/santara';
+  let url: URL;
+
+  try {
+    if (base.startsWith('/')) {
+      url = new URL(base, origin);
+    } else {
+      url = new URL(base);
+    }
+  } catch {
+    url = new URL(DEFAULT_GAS_URL);
+  }
+
+  if (action) {
+    url.searchParams.set('action', action);
+  }
+
+  // Append query parameters
+  Object.entries(params).forEach(([key, val]) => {
+    if (val !== undefined && val !== null && String(val).trim() !== '') {
+      url.searchParams.set(key, String(val).trim());
+    }
+  });
+
+  return url;
 }
 
 /**
@@ -48,27 +92,11 @@ export async function apiGet<T>(
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      // On retry > 0 or if proxy fails in browser, we can also try direct fallback
-      const targetBase = attempt > 0 && isBrowser && attempt === maxRetries
-        ? DIRECT_GAS_URL
-        : primaryUrl;
+      // On retry > 0 or if proxy fails in browser, try direct GAS endpoint
+      const targetBase =
+        attempt > 0 && isBrowser && attempt === maxRetries ? DIRECT_GAS_URL : primaryUrl;
 
-      const url = new URL(
-        targetBase.startsWith('/')
-          ? `${window.location.origin}${targetBase}`
-          : targetBase
-      );
-
-      if (action) {
-        url.searchParams.set('action', action);
-      }
-
-      // Append query parameters
-      Object.entries(params).forEach(([key, val]) => {
-        if (val !== undefined && val !== null && String(val).trim() !== '') {
-          url.searchParams.set(key, String(val).trim());
-        }
-      });
+      const url = buildRequestUrl(targetBase, action, params);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(
@@ -129,7 +157,7 @@ export async function apiGet<T>(
   const errorMsg =
     lastError instanceof Error && lastError.message
       ? lastError.message
-      : 'Koneksi ke server database gagal. Silakan klik Refresh Data untuk mencoba kembali.';
+      : 'Koneksi ke server database gagal. Silakan klik Coba Lagi untuk menyegarkan data.';
 
   return {
     success: false,
@@ -155,13 +183,10 @@ export async function apiPost<T>(
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const targetBase = attempt > 0 && isBrowser && attempt === maxRetries
-        ? DIRECT_GAS_URL
-        : primaryUrl;
+      const targetBase =
+        attempt > 0 && isBrowser && attempt === maxRetries ? DIRECT_GAS_URL : primaryUrl;
 
-      const fullUrl = targetBase.startsWith('/')
-        ? `${window.location.origin}${targetBase}`
-        : targetBase;
+      const url = buildRequestUrl(targetBase);
 
       const payload = {
         action,
@@ -174,7 +199,7 @@ export async function apiPost<T>(
         options.timeoutMs || 30000
       );
 
-      const response = await fetch(fullUrl, {
+      const response = await fetch(url.toString(), {
         method: 'POST',
         redirect: 'follow',
         cache: 'no-store',

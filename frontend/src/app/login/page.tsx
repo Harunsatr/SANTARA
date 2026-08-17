@@ -59,11 +59,12 @@ function LoginContent() {
   const [regStudentCode, setRegStudentCode] = useState('');
   const [regBirthDate, setRegBirthDate] = useState('');
   const [regError, setRegError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     let ignore = false;
 
-    async function loadDatabaseData() {
+    async function loadData() {
       try {
         const [usersRes, schoolsRes, classesRes, studentsRes] = await Promise.all([
           fetchUsers(),
@@ -98,12 +99,12 @@ function LoginContent() {
       }
     }
 
-    loadDatabaseData();
+    loadData();
 
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [refreshTrigger]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -331,7 +332,14 @@ function LoginContent() {
           {loading ? (
             <LoadingState text="Menghubungkan ke database SANTARA..." />
           ) : error ? (
-            <ErrorState message={error} onRetry={() => window.location.reload()} />
+            <ErrorState
+              message={error}
+              onRetry={() => {
+                setLoading(true);
+                setError(null);
+                setRefreshTrigger(prev => prev + 1);
+              }}
+            />
           ) : !isRegistering ? (
             /* ==================== LOGIN FORM ==================== */
             <form onSubmit={handleLogin} className="flex flex-col gap-4">
