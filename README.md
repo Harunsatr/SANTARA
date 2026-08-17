@@ -8,11 +8,10 @@ SANTARA adalah sistem pemantauan dan pengelolaan kesehatan remaja SMA yang terin
 
 Repositori ini terdiri dari modul-modul berikut:
 
-- **`frontend/`**: Aplikasi web Next.js App Router dengan arsitektur UI premium berbasis Tailwind CSS/Vanilla CSS, lengkap dengan sistem otorisasi multi-role (**ADMIN**, **GURU**, **SISWA**), visualisasi data grafik, dan integrasi API proxy.
+- **`frontend/`**: Aplikasi web Next.js App Router dengan arsitektur UI premium berbasis Tailwind CSS/Vanilla CSS, lengkap dengan sistem otorisasi multi-role (**ADMIN**, **KADER SATRIA**, **GURU**, **SISWA**), visualisasi data grafik, dan integrasi API proxy.
 - **`Kode.js`**: Kode sumber Google Apps Script (GAS) REST API v2.0 yang bertindak sebagai backend serverless dan berinteraksi langsung dengan database Google Sheets.
 - **`appsscript.json`**: File manifest Google Apps Script.
-- **`docs/`**: Kumpulan dokumen laporan arsitektur, skema basis data, matriks kapabilitas API, dan laporan audit keamanan fungsional role.
-- **`Rancangan Produk Santara.docx`**: Dokumen spesifikasi kebutuhan produk resmi.
+- **`docs/`**: Kumpulan dokumen laporan arsitektur, skema basis data, matriks kapabilitas API, dan laporan audit konsistensi produk (`CHANGE_REQUEST_AUDIT_REPORT.md`).
 
 ---
 
