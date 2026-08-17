@@ -8,7 +8,7 @@
 export type Gender = 'L' | 'P';
 export type StudentStatus = 'active' | 'inactive';
 export type EducationStatus = 'draft' | 'published' | string;
-export type UserRole = 'ADMIN' | 'KADER' | 'GURU' | 'SISWA' | 'admin' | 'kader' | 'guru' | 'siswa' | string;
+export type UserRole = 'KEPALA_SEKOLAH' | 'KADER' | 'ADMIN' | 'GURU' | 'SISWA' | 'kepala_sekolah' | 'admin' | 'kader' | 'guru' | 'siswa' | string;
 
 export type NutritionStatusCategory =
   | 'Severely Thinness'

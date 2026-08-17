@@ -34,28 +34,29 @@ export function KaderNavbar() {
 
   const role = normalizeRole(String(user?.role || ''));
 
-  // Base navigation links — available to ADMIN and GURU
+  // Base navigation links — available to KEPALA_SEKOLAH and KADER
   const baseNavLinks = [
     { href: '/kader/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
     { href: '/kader/status-gizi', label: 'Status Gizi', icon: <Activity className="w-4 h-4" /> },
     { href: '/kader/skrining', label: 'Skrining', icon: <Stethoscope className="w-4 h-4" /> },
     { href: '/kader/ttd', label: 'TTD', icon: <Pill className="w-4 h-4" /> },
     { href: '/kader/data-siswa', label: 'Data Siswa', icon: <Users className="w-4 h-4" /> },
-    { href: '/kader/edukasi-kelola', label: 'Edukasi', icon: <BookOpen className="w-4 h-4" /> },
+    { href: '/kader/edukasi-kelola', label: 'Artikel Umum', icon: <BookOpen className="w-4 h-4" /> },
   ];
 
-  // ADMIN-exclusive navigation link
-  const adminNavLinks = [
+  // KEPALA_SEKOLAH exclusive navigation link
+  const isKepalaSekolah = role === 'KEPALA_SEKOLAH' || role === 'ADMIN';
+  const kepalaSekolahNavLinks = [
     {
       href: '/admin/users',
-      label: 'Manajemen Pengguna',
+      label: 'Kelola Kader',
       icon: <ShieldCheck className="w-4 h-4" />,
     },
   ];
 
   // Build nav based on role
-  const navLinks = role === 'ADMIN'
-    ? [...baseNavLinks, ...adminNavLinks]
+  const navLinks = isKepalaSekolah
+    ? [...baseNavLinks, ...kepalaSekolahNavLinks]
     : baseNavLinks;
 
   const displayName = user?.userName || user?.name || 'Pengguna SANTARA';

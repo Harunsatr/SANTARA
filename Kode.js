@@ -1369,6 +1369,105 @@ function getUsers(params) {
   return listResponse("Data pengguna berhasil diambil", data);
 }
 
+/**
+ * Menambahkan pengguna / kader baru (01_USERS).
+ */
+function createUser(data) {
+  if (!data || !data.name || !data.role) {
+    return errorResponse("Field name dan role wajib diisi", "VALIDATION_ERROR");
+  }
+
+  const schoolId = data.school_id ? String(data.school_id).trim() : "";
+  if (schoolId && !recordExists(SHEETS.SCHOOLS, schoolId)) {
+    return errorResponse("Sekolah tidak ditemukan", "SCHOOL_NOT_FOUND", { school_id: schoolId });
+  }
+
+  const newId = generateNextId(SHEETS.USERS);
+  const now = new Date().toISOString();
+
+  const userObj = {
+    id: newId,
+    name: String(data.name).trim(),
+    email: data.email ? String(data.email).trim() : "",
+    role: String(data.role).trim(),
+    school_id: schoolId,
+    class_id: data.class_id ? String(data.class_id).trim() : "",
+    status: data.status ? String(data.status).trim() : "active",
+    created_at: now
+  };
+
+  const sheet = getSheet(SHEETS.USERS);
+  if (!sheet) {
+    return errorResponse("Sheet 01_USERS tidak ditemukan", "SHEET_NOT_FOUND");
+  }
+
+  const headers = sheet.getDataRange().getValues()[0];
+  const newRow = objectToRow(headers, userObj);
+  sheet.appendRow(newRow);
+
+  appendAuditLog({
+    user_id: data.created_by || "SYSTEM",
+    action: "CREATE_USER",
+    table_name: SHEETS.USERS,
+    record_id: newId,
+    description: "Menambahkan pengguna baru " + userObj.name + " (" + userObj.role + ")"
+  });
+
+  return successResponse("Pengguna berhasil didaftarkan", userObj);
+}
+
+/**
+ * Memperbarui data atau status aktif/nonaktif pengguna/kader (01_USERS).
+ * Digunakan oleh Kepala Sekolah untuk mengaktifkan/menonaktifkan kader SATRIA.
+ */
+function updateUser(data) {
+  if (!data || !data.id) {
+    return errorResponse("Field id pengguna wajib diisi", "VALIDATION_ERROR");
+  }
+
+  const sheet = getSheet(SHEETS.USERS);
+  if (!sheet) {
+    return errorResponse("Sheet 01_USERS tidak ditemukan", "SHEET_NOT_FOUND");
+  }
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) {
+    return errorResponse("Data pengguna tidak ditemukan", "USER_NOT_FOUND");
+  }
+
+  const headers = values[0];
+  const idIndex = headers.indexOf("id");
+  const rowIndex = values.findIndex((row, idx) => idx > 0 && String(row[idIndex] || "").trim() === String(data.id).trim());
+
+  if (rowIndex === -1) {
+    return errorResponse("Pengguna tidak ditemukan", "USER_NOT_FOUND", { id: data.id });
+  }
+
+  const rowNumber = rowIndex + 1;
+  const currentObj = rowToObject(headers, values[rowIndex]);
+
+  const updatedObj = Object.assign({}, currentObj);
+  if (data.name !== undefined) updatedObj.name = String(data.name).trim();
+  if (data.email !== undefined) updatedObj.email = String(data.email).trim();
+  if (data.role !== undefined) updatedObj.role = String(data.role).trim();
+  if (data.status !== undefined) updatedObj.status = String(data.status).trim();
+  if (data.school_id !== undefined) updatedObj.school_id = String(data.school_id).trim();
+  if (data.class_id !== undefined) updatedObj.class_id = String(data.class_id).trim();
+
+  const newRowValues = objectToRow(headers, updatedObj);
+  sheet.getRange(rowNumber, 1, 1, newRowValues.length).setValues([newRowValues]);
+
+  appendAuditLog({
+    user_id: data.updated_by || "KEPALA_SEKOLAH",
+    action: "UPDATE_USER",
+    table_name: SHEETS.USERS,
+    record_id: data.id,
+    description: "Memperbarui status/data pengguna " + data.id + " -> status: " + updatedObj.status
+  });
+
+  return successResponse("Data pengguna berhasil diperbarui", updatedObj);
+}
+
 // ============================================================
 // 13. ROUTING & CONTROLLERS (doGet, doPost)
 // ============================================================
@@ -1479,6 +1578,13 @@ function doPost(e) {
 
       case "updateEducation":
         return updateEducation(data);
+
+      // Users
+      case "createUser":
+        return createUser(data);
+
+      case "updateUser":
+        return updateUser(data);
 
       default:
         return errorResponse("Action POST tidak dikenali", "UNKNOWN_ACTION", { action: action });

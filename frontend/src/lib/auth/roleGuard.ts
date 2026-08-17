@@ -8,20 +8,19 @@ import { AppRole, PrototypeSession, SessionValidationResult } from '@/types/auth
 import { User, Student } from '@/types/models';
 
 // ============================================================
-// ROLE CONSTANTS — Exactly 3 canonical roles
+// ROLE CONSTANTS — Primary 2 authorized roles for login
 // ============================================================
 
-export const APP_ROLES: AppRole[] = ['ADMIN', 'KADER', 'SISWA'];
+export const APP_ROLES: AppRole[] = ['KEPALA_SEKOLAH', 'KADER', 'ADMIN'];
 
 /**
- * Normalizes a raw role string from the database to one of the 3 canonical AppRole values.
- * Handles old DB values ('kader', 'admin', 'guru', 'siswa') and new capitalized values.
- * Maps 'guru'/'kader' to 'KADER' (Kader SATRIA).
- * Returns null if the role cannot be mapped to a valid AppRole.
+ * Normalizes a raw role string from the database to canonical AppRole values.
+ * Maps 'kepala sekolah' / 'admin' -> 'KEPALA_SEKOLAH'
+ * Maps 'kader' / 'kader satria' / 'guru' -> 'KADER'
  */
 export function normalizeRole(rawRole: string): AppRole | null {
   const r = rawRole.trim().toLowerCase();
-  if (r === 'admin' || r === 'kepala sekolah') return 'ADMIN';
+  if (r === 'kepala sekolah' || r === 'kepala_sekolah' || r === 'admin' || r === 'principal' || r === 'headmaster') return 'KEPALA_SEKOLAH';
   if (r === 'guru' || r === 'kader' || r === 'kader satria' || r === 'satria' || r === 'petugas_kesehatan') return 'KADER';
   if (r === 'siswa' || r === 'student') return 'SISWA';
   return null;
@@ -32,7 +31,7 @@ export function normalizeRole(rawRole: string): AppRole | null {
  */
 export function getRoleLabel(role: AppRole | string): string {
   const r = (role || '').trim().toLowerCase();
-  if (r === 'admin') return 'Administrator';
+  if (r === 'kepala sekolah' || r === 'kepala_sekolah' || r === 'admin') return 'Kepala Sekolah';
   if (r === 'kader' || r === 'guru' || r === 'kader satria' || r === 'satria') return 'Kader SATRIA';
   if (r === 'siswa') return 'Siswa';
   return role || 'Pengguna';
@@ -49,8 +48,8 @@ export function getRoleLabel(role: AppRole | string): string {
  * /edukasi         → PUBLIC
  * /grafik          → PUBLIC
  * /login           → PUBLIC
- * /kader/*         → ADMIN + KADER (Kader SATRIA)
- * /admin/*         → ADMIN only
+ * /kader/*         → KEPALA_SEKOLAH + KADER (Kader SATRIA)
+ * /admin/*         → KEPALA_SEKOLAH (Kelola Kader & Pengguna)
  * /siswa/*         → SISWA only
  */
 export function canAccessRoute(
@@ -62,14 +61,14 @@ export function canAccessRoute(
   const rawRole = String(user.role || '').trim();
   const role = normalizeRole(rawRole);
 
-  // Area kerja ADMIN + KADER
+  // Area kerja KEPALA_SEKOLAH + KADER
   if (pathname.startsWith('/kader')) {
-    return role === 'ADMIN' || role === 'KADER' || (role as string) === 'GURU';
+    return role === 'KEPALA_SEKOLAH' || role === 'ADMIN' || role === 'KADER';
   }
 
-  // Area eksklusif ADMIN
+  // Area eksklusif KEPALA_SEKOLAH (Kelola Akun Kader)
   if (pathname.startsWith('/admin')) {
-    return role === 'ADMIN';
+    return role === 'KEPALA_SEKOLAH' || role === 'ADMIN';
   }
 
   // Area eksklusif SISWA
@@ -85,7 +84,7 @@ export function canAccessRoute(
  * Returns the default home route after login based on role.
  */
 export function getDefaultRoute(role: AppRole | null): string {
-  if (role === 'ADMIN' || role === 'KADER' || (role as string) === 'GURU') return '/kader/dashboard';
+  if (role === 'KEPALA_SEKOLAH' || role === 'ADMIN' || role === 'KADER') return '/kader/dashboard';
   if (role === 'SISWA') return '/siswa/dashboard';
   return '/login';
 }
