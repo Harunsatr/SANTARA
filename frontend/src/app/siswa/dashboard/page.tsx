@@ -151,7 +151,7 @@ export default function SiswaDashboardPage() {
               leftIcon={<BookOpen className="w-4 h-4" />}
               className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs font-bold"
             >
-              Media Edukasi Anemia
+              Media Edukasi
             </Button>
           </Link>
         </div>

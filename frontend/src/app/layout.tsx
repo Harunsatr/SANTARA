@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     'Status Gizi Remaja',
     'Anemia Remaja',
     'Tablet Tambah Darah',
-    'Media Edukasi Anemia',
+    'Media Edukasi',
     'JAKRA',
   ],
   authors: [{ name: 'Tim SANTARA' }],

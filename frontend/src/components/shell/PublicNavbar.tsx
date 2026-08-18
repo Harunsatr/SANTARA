@@ -12,7 +12,7 @@ export function PublicNavbar() {
 
   const navLinks = [
     { href: '/', label: 'Beranda' },
-    { href: '/edukasi', label: 'Media Edukasi Anemia' },
+    { href: '/edukasi', label: 'Media Edukasi' },
   ];
 
   return (

@@ -323,7 +323,7 @@ export default function EdukasiKelolaPage() {
                 Kelola Artikel Umum
               </h1>
               <p className="text-sm text-slate-500 mt-0.5">
-                Pusat manajemen artikel edukasi gizi, anemia, dan panduan kesehatan UKS sekolah.
+                Pusat manajemen dan publikasi artikel edukasi umum bagi siswa dan lingkungan sekolah.
               </p>
             </div>
           </div>
@@ -724,12 +724,14 @@ export default function EdukasiKelolaPage() {
               value={formCategory}
               onChange={e => setFormCategory(e.target.value)}
               options={[
-                { label: 'Gizi Seimbang', value: 'Gizi Seimbang' },
-                { label: 'Anemia Remaja', value: 'Anemia Remaja' },
-                { label: 'Tablet Tambah Darah (TTD)', value: 'Tablet Tambah Darah' },
+                { label: 'Kesehatan Remaja', value: 'Kesehatan Remaja' },
+                { label: 'Pola Hidup Sehat', value: 'Pola Hidup Sehat' },
+                { label: 'Gaya Hidup & Kebiasaan Positif', value: 'Gaya Hidup' },
                 { label: 'Aktivitas Fisik & Kebugaran', value: 'Aktivitas Fisik' },
-                { label: 'Kesehatan Reproduksi', value: 'Kesehatan Reproduksi' },
-                { label: 'Panduan UKS Sekolah', value: 'UKS Sekolah' },
+                { label: 'Kesehatan Mental & Edukasi', value: 'Kesehatan Mental' },
+                { label: 'Kebersihan & Sanitasi', value: 'Kebersihan' },
+                { label: 'Tips & Panduan Siswa', value: 'Tips dan Panduan' },
+                { label: 'Informasi Sekolah', value: 'Informasi Sekolah' },
               ]}
               required
             />

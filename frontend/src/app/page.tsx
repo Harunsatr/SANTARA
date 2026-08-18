@@ -145,7 +145,7 @@ export default function HomePage() {
                   className="w-full sm:w-auto text-sm sm:text-base font-bold bg-white/10 hover:bg-white/20 text-white border-white/20"
                   leftIcon={<BookOpen className="w-4 h-4" />}
                 >
-                  Media Edukasi Anemia
+                  Media Edukasi
                 </Button>
               </Link>
 
@@ -229,10 +229,10 @@ export default function HomePage() {
                   Edukasi Kesehatan
                 </span>
                 <h3 className="text-lg font-bold text-slate-900">
-                  Pendidikan & Edukasi Anemia
+                  Pendidikan &amp; Media Edukasi
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Penyuluhan interaktif mengenai pencegahan anemia, klasifikasi anemia menurut jenis kelamin, tanda gejala anemia, dan pemanfaatan media edukasi anemia.
+                  Penyuluhan interaktif mengenai pola hidup sehat, gizi seimbang, pencegahan anemia, dan pemanfaatan media edukasi di lingkungan sekolah.
                 </p>
               </div>
               <div className="mt-auto pt-2">
@@ -380,10 +380,10 @@ export default function HomePage() {
                   1
                 </div>
                 <h3 className="text-base font-bold text-slate-900 mb-1">
-                  Media Edukasi Anemia
+                  Media Edukasi
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Media edukasi komprehensif pencegahan anemia yang memuat klasifikasi anemia per jenis kelamin, faktor penyebab anemia, serta panduan asupan pangan kaya zat besi.
+                  Pusat media edukasi komprehensif yang memuat panduan kesehatan remaja, gizi seimbang, pencegahan anemia, dan pembiasaan gaya hidup sehat di sekolah.
                 </p>
               </div>
               <div className="mt-4 pt-3 border-t border-sky-100">

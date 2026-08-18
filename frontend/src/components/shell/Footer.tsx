@@ -64,7 +64,7 @@ export function Footer() {
               Media Pendamping UKS
             </h4>
             <ul className="text-xs text-slate-400 space-y-1.5 leading-relaxed">
-              <li>• <strong>Media Edukasi Anemia</strong> — Edukasi Gizi & Pencegahan Anemia Remaja</li>
+              <li>• <strong>Media Edukasi</strong> — Informasi &amp; Edukasi Kesehatan Remaja</li>
               <li>• <strong>JAKRA</strong> — Jejak Kesehatan Remaja (Kartu Fisik F4)</li>
               <li>• <strong>Panduan Terpadu UKS</strong> — Pengukuran Status Gizi & Skrining Kesehatan</li>
               <li>• <strong>Kader SATRIA</strong> — Satuan Remaja Peduli Kesehatan</li>

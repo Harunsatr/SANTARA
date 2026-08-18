@@ -42,10 +42,10 @@ export const OFFICIAL_PROGRAM_ACTIVITIES: ActivityPhoto[] = [
   },
   {
     id: 'ACT002',
-    title: 'Penyusunan Media Edukasi Anemia & Kartu JAKRA',
+    title: 'Penyusunan Media Edukasi & Kartu JAKRA',
     category: 'kader',
     activityDate: '2024-07-28',
-    description: 'Finalisasi desain media edukasi anemia dan kartu rekam kesehatan fisik JAKRA.',
+    description: 'Finalisasi desain media edukasi dan kartu rekam kesehatan fisik JAKRA.',
     location: 'Laboratorium FIK UM',
   },
   {

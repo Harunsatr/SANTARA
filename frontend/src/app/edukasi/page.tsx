@@ -6,6 +6,7 @@ import {
   Badge,
   Button,
   LoadingState,
+  Input,
 } from '@/components/ui';
 import { fetchEducations } from '@/lib/api';
 import { EducationArticle } from '@/types/models';
@@ -19,6 +20,8 @@ import {
   Flame,
   HelpCircle,
   RotateCcw,
+  Search,
+  Layers,
 } from 'lucide-react';
 
 export default function PublicEducationPage() {
@@ -26,6 +29,7 @@ export default function PublicEducationPage() {
   const [articles, setArticles] = useState<EducationArticle[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(true);
   const [articleCategory, setArticleCategory] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Interactive Education State
   const [gender, setGender] = useState<'L' | 'P'>('P');
@@ -53,11 +57,24 @@ export default function PublicEducationPage() {
     };
   }, []);
 
+  // Dynamically extract unique categories from loaded articles
+  const availableCategories = ['ALL', ...Array.from(new Set(articles.map(a => a.category?.trim() || 'Umum')))];
+
   // Filtered Articles
-  const filteredArticles =
-    articleCategory === 'ALL'
-      ? articles
-      : articles.filter(a => (a.category || '').toUpperCase() === articleCategory);
+  const filteredArticles = articles.filter(a => {
+    if (articleCategory !== 'ALL' && (a.category?.trim().toUpperCase() !== articleCategory.toUpperCase())) {
+      return false;
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchTitle = (a.title || '').toLowerCase().includes(q);
+      const matchContent = (a.content || '').toLowerCase().includes(q);
+      const matchExcerpt = (a.excerpt || '').toLowerCase().includes(q);
+      const matchCategory = (a.category || '').toLowerCase().includes(q);
+      return matchTitle || matchContent || matchExcerpt || matchCategory;
+    }
+    return true;
+  });
 
   const ironFoodDatabase: Record<
     string,
@@ -87,51 +104,51 @@ export default function PublicEducationPage() {
   const currentDrink = drinkDatabase[selectedDrink] || drinkDatabase.jeruk;
   const dailyTargetMg = gender === 'P' ? 15 : 11;
 
-  const gejalaAnemia = [
-    { title: 'Lesu', desc: 'Tubuh terasa lunglai dan enggan beraktivitas fisik.' },
-    { title: 'Letih', desc: 'Cepat merasa lelah meskipun hanya melakukan aktivitas ringan.' },
-    { title: 'Lemah', desc: 'Kekuatan otot menurun, sering merasa pusing atau kunang-kunang.' },
-    { title: 'Lelah', desc: 'Daya tahan tubuh rendah, mudah mengantuk di kelas.' },
-    { title: 'Lalai', desc: 'Sulit fokus belajar, konsentrasi dan daya ingat menurun.' },
+  const gejalaSehat = [
+    { title: 'Kebugaran Fisik', desc: 'Menjaga stamina tubuh tetap prima dan berenergi saat beraktivitas di sekolah.' },
+    { title: 'Konsentrasi Belajar', desc: 'Asupan nutrisi cukup menjaga fokus berpikir, daya ingat, dan daya tangkap pelajaran.' },
+    { title: 'Pola Tidur Sehat', desc: 'Istirahat cukup 7–8 jam sehari untuk pemulihan sel tubuh dan regenerasi stamina.' },
+    { title: 'Hidrasi & Nutrisi', desc: 'Minum air putih cukup dan konsumsi gizi seimbang untuk imunitas optimal.' },
+    { title: 'Aktivitas Positif', desc: 'Rutin berolahraga ringan minimal 30 menit setiap hari untuk menjaga mood dan fisik.' },
   ];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex flex-col gap-12 sm:gap-16">
       {/* 1. HEADER SECTION */}
       <section className="flex flex-col items-center text-center gap-4 max-w-3xl mx-auto">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-sky-100 text-sky-800 rounded-full text-xs font-bold uppercase tracking-wider">
-          <BookOpen className="w-3.5 h-3.5" />
-          <span>Pusat Edukasi Kesehatan Remaja SMA</span>
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-sky-100 text-sky-800 rounded-full text-xs font-bold uppercase tracking-wider shadow-2xs">
+          <BookOpen className="w-4 h-4 text-sky-700" />
+          <span>Pusat Edukasi &amp; Informasi Remaja SMA</span>
         </div>
         <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight font-display">
-          Ketahui Anemia, Cegah Gejala & Optimalkan Prestasi
+          Media Edukasi
         </h1>
-        <p className="text-xs sm:text-base text-slate-600 leading-relaxed font-sans">
-          Anemia defisiensi besi merupakan masalah gizi utama pada remaja, terutama remaja putri karena menstruasi bulanan. Pahami faktor penyebab, asupan gizi seimbang, dan simulasi kebutuhan zat besi di bawah ini.
+        <p className="text-xs sm:text-base text-slate-600 leading-relaxed font-sans max-w-2xl">
+          Pusat informasi, wawasan kesehatan, dan materi edukasi pilihan untuk mendukung pengetahuan, pola hidup sehat, serta tumbuh kembang positif remaja di lingkungan sekolah.
         </p>
       </section>
 
-      {/* 2. GEJALA ANEMIA */}
+      {/* 2. WAWASAN KESEHATAN & KEBUGARAN REMAJA */}
       <section className="flex flex-col gap-6">
         <div className="flex flex-col gap-1 text-center sm:text-left">
-          <Badge variant="danger" className="w-fit mx-auto sm:mx-0">
-            Waspadai Bahaya
+          <Badge variant="primary" className="w-fit mx-auto sm:mx-0">
+            Wawasan Kesehatan Remaja
           </Badge>
           <h2 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight font-display">
-            Tanda & Gejala Anemia pada Remaja Sekolah
+            Panduan Pola Hidup Sehat &amp; Kebugaran Siswa
           </h2>
           <p className="text-xs sm:text-sm text-slate-600">
-            Kadar hemoglobin (Hb) normal remaja putri adalah ≥ 12.0 g/dL dan remaja putra ≥ 13.0 g/dL. Jika kadar Hb rendah, pasokan oksigen ke otak dan jaringan tubuh menurun drastis.
+            Keseimbangan antara gizi seimbang, aktivitas fisik teratur, serta hidrasi cukup merupakan kunci utama dalam mengoptimalkan prestasi belajar dan daya tahan tubuh.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {gejalaAnemia.map((item, idx) => (
+          {gejalaSehat.map((item, idx) => (
             <Card
               key={item.title}
-              className="p-5 flex flex-col gap-2 border-rose-100 bg-gradient-to-b from-rose-50/40 to-white hover:border-rose-300 transition-all shadow-2xs"
+              className="p-5 flex flex-col gap-2 border-sky-100 bg-gradient-to-b from-sky-50/40 to-white hover:border-sky-300 transition-all shadow-2xs"
             >
-              <div className="w-9 h-9 rounded-xl bg-rose-500 text-white font-black text-sm flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-sky-600 text-white font-black text-sm flex items-center justify-center shrink-0">
                 {idx + 1}
               </div>
               <h3 className="text-base font-bold text-slate-900 mt-1">{item.title}</h3>
@@ -141,19 +158,19 @@ export default function PublicEducationPage() {
         </div>
       </section>
 
-      {/* 3. MEDIA EDUKASI ANEMIA */}
+      {/* 3. MEDIA EDUKASI INTERAKTIF & SIMULASI NUTRISI */}
       <section className="p-6 sm:p-10 rounded-3xl bg-gradient-to-br from-sky-900 via-sky-950 to-slate-900 text-white border border-sky-800 shadow-xl flex flex-col gap-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-sky-800/80 pb-6">
           <div className="flex flex-col gap-1">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-bold uppercase tracking-wider w-fit">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Media Edukasi Anemia</span>
+              <span>Media Edukasi Interaktif</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-white font-display">
-              Media Edukasi Anemia
+              Media Edukasi &amp; Simulasi Nutrisi Seimbang
             </h2>
             <p className="text-xs sm:text-sm text-sky-200/80 max-w-2xl">
-              Media edukasi pencegahan anemia yang memuat klasifikasi kadar Hb menurut jenis kelamin, penyebab anemia, sumber makanan kaya zat besi (heme &amp; non-heme), serta faktor pendukung dan penghambat absorpsi zat besi. Media fisik dapat digunakan dalam kegiatan edukasi langsung di sekolah.
+              Media edukasi interaktif yang menyajikan panduan kebutuhan nutrisi, sumber zat gizi harian, kombinasi makanan bergizi, serta tips menjaga kebugaran tubuh bagi siswa.
             </p>
           </div>
           <Button
@@ -171,32 +188,32 @@ export default function PublicEducationPage() {
           </Button>
         </div>
 
-        {/* Rotary Disc Physical Specifications */}
+        {/* Physical Specifications / Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col gap-1.5">
             <span className="text-[11px] font-bold text-sky-300 uppercase tracking-wider">
-              Bagian 1 • Klasifikasi Gender
+              Bagian 1 • Kebutuhan Gizi Remaja
             </span>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Membedakan kadar normal Hb dan risiko anemia remaja putri (<strong>Merah Muda</strong>, Hb &ge; 12.0 g/dL) dan remaja putra (<strong>Biru</strong>, Hb &ge; 13.0 g/dL).
+              Mengetahui kebutuhan mikronutrien dan zat besi harian bagi remaja putri dan putra sesuai anjuran kesehatan.
             </p>
           </div>
 
           <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col gap-1.5">
             <span className="text-[11px] font-bold text-emerald-300 uppercase tracking-wider">
-              Bagian 2 • Penyebab &amp; Sumber Pangan
+              Bagian 2 • Kombinasi Pangan Sehat
             </span>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Zona <strong>Hijau</strong> menyajikan informasi penyebab anemia, sumber zat besi hewani/nabati, dan kombinasi pangan peningkat penyerapan zat besi.
+              Panduan memilih kombinasi makanan peningkat penyerapan nutrisi (seperti buah kaya Vitamin C) dan menghindari faktor penghambat.
             </p>
           </div>
 
           <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col gap-1.5">
             <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider">
-              Spesifikasi Fisik Media
+              Bagian 3 • Media Edukasi UKS
             </span>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Media edukasi putar fisik berbahan <strong>Artpaper 310 gsm</strong> dengan diameter piringan dalam 12,5 cm dan piringan luar 11,5 cm.
+              Media edukasi interaktif yang dapat digunakan untuk kegiatan bimbingan kesehatan, penyuluhan UKS, dan aksi sehat di sekolah.
             </p>
           </div>
         </div>
@@ -207,7 +224,7 @@ export default function PublicEducationPage() {
           <div className="lg:col-span-5 flex flex-col gap-5 bg-white/5 p-6 rounded-2xl border border-white/10">
             <h3 className="text-sm font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2">
               <Zap className="w-4 h-4" />
-              <span>1. Pengaturan Gender &amp; Kebutuhan Zat Besi</span>
+              <span>1. Pengaturan Gender &amp; Target Harian</span>
             </h3>
 
             {/* Gender Select */}
@@ -246,7 +263,7 @@ export default function PublicEducationPage() {
 
             {/* Iron Source Choice */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-slate-300">Sumber Pangan Zat Besi</label>
+              <label className="text-xs font-semibold text-slate-300">Sumber Pangan Nutrisi</label>
               <select
                 value={selectedIronSource}
                 onChange={e => setSelectedIronSource(e.target.value)}
@@ -283,7 +300,7 @@ export default function PublicEducationPage() {
             <div className="p-5 rounded-2xl bg-white/10 border border-white/15 flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-sky-300 uppercase tracking-wider">
-                  Target Kebutuhan Zat Besi Remaja
+                  Target Kebutuhan Nutrisi Harian
                 </span>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/20 font-bold">
                   {gender === 'P' ? 'Remaja Putri' : 'Remaja Putra'}
@@ -298,11 +315,11 @@ export default function PublicEducationPage() {
               <p className="text-xs text-sky-100 leading-relaxed">
                 {gender === 'P' ? (
                   <span className="text-rose-200 font-semibold block">
-                    Remaja putri wajib mengonsumsi makanan tinggi zat besi dan 1 Tablet Tambah Darah (TTD) tiap minggu saat menstruasi / program UKS untuk mengganti zat besi yang hilang.
+                    Remaja putri dianjurkan mengonsumsi makanan bergizi seimbang dan Tablet Tambah Darah (TTD) teratur untuk menjaga stamina dan kadar hemoglobin tetap optimal.
                   </span>
                 ) : (
                   <span className="text-sky-200 font-semibold block">
-                    Remaja putra membutuhkan zat besi yang cukup untuk mendukung lonjakan pertumbuhan fisik (growth spurt) dan pembentukan massa otot.
+                    Remaja putra membutuhkan asupan zat gizi yang cukup untuk mendukung pertumbuhan fisik, kebugaran jasmani, dan aktivitas belajar.
                   </span>
                 )}
               </p>
@@ -372,106 +389,69 @@ export default function PublicEducationPage() {
         </div>
       </section>
 
-      {/* 4. ATURAN MINUM TTD (TABLET TAMBAH DARAH) */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="p-6 border-emerald-200 bg-emerald-50/30">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900">
-              Anjuran Minum Tablet Tambah Darah (TTD)
-            </h3>
-          </div>
-          <ul className="text-xs sm:text-sm text-slate-700 space-y-2.5 leading-relaxed">
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 mt-2 shrink-0" />
-              <span>Minum <strong>1 tablet setiap minggu</strong> secara teratur pada hari yang sama (program Aksi Bergizi sekolah).</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 mt-2 shrink-0" />
-              <span>Minum bersama <strong>air putih</strong> atau <strong>jus buah kaya Vitamin C</strong> (jeruk/jambu/tomat).</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 mt-2 shrink-0" />
-              <span>Dianjurkan diminum malam hari sebelum tidur untuk meminimalkan rasa mual ringan.</span>
-            </li>
-          </ul>
-        </Card>
-
-        <Card className="p-6 border-rose-200 bg-rose-50/30">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center">
-              <XCircle className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900">
-              Pantangan Saat Minum TTD
-            </h3>
-          </div>
-          <ul className="text-xs sm:text-sm text-slate-700 space-y-2.5 leading-relaxed">
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-600 mt-2 shrink-0" />
-              <span><strong>JANGAN</strong> minum TTD bersama teh, kopi, atau minuman bersoda (tanin menghambat zat besi).</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-600 mt-2 shrink-0" />
-              <span><strong>JANGAN</strong> minum TTD bersama susu atau obat maag antasida (kalsium mengganggu penyerapan).</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-600 mt-2 shrink-0" />
-              <span>Beri jeda minimal <strong>2 jam</strong> jika ingin mengonsumsi teh, kopi, atau susu setelah minum TTD.</span>
-            </li>
-          </ul>
-        </Card>
-      </section>
-
-      {/* 5. ARTIKEL UMUM DARI DATABASE */}
+      {/* 4. ARTIKEL UMUM DARI DATABASE */}
       <section className="flex flex-col gap-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
-            <Badge variant="primary" className="w-fit">
-              Artikel Umum
-            </Badge>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-100 text-sky-800 text-xs font-bold uppercase tracking-wider w-fit">
+              <Layers className="w-3.5 h-3.5" />
+              <span>Artikel Umum</span>
+            </div>
             <h2 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight font-display">
               Artikel Umum
             </h2>
+            <p className="text-xs sm:text-sm text-slate-500">
+              Informasi dan wawasan pilihan untuk mendukung pengetahuan, kesehatan, dan gaya hidup positif.
+            </p>
           </div>
 
-          {/* Category Filter */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
-            {['ALL', 'ANEMIA', 'GIZI', 'UKS'].map(cat => (
-              <button
-                key={cat}
-                onClick={() => setArticleCategory(cat)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
-                  articleCategory === cat
-                    ? 'bg-sky-600 text-white shadow-xs'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                {cat === 'ALL' ? 'Semua Artikel' : cat}
-              </button>
-            ))}
+          {/* Search Box */}
+          <div className="w-full sm:w-64">
+            <Input
+              placeholder="Cari artikel..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              leftIcon={<Search className="w-4 h-4 text-slate-400" />}
+            />
           </div>
+        </div>
+
+        {/* Dynamic Category Filters */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+          {availableCategories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setArticleCategory(cat)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                articleCategory === cat
+                  ? 'bg-sky-600 text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {cat === 'ALL' ? 'Semua Kategori' : cat}
+            </button>
+          ))}
         </div>
 
         {loadingArticles ? (
           <LoadingState variant="card" rows={3} text="Memuat artikel umum..." />
         ) : filteredArticles.length === 0 ? (
           <div className="text-center py-12 p-6 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-xs text-slate-500">
-            Belum ada artikel umum yang dipublikasikan untuk kategori ini.
+            {searchQuery
+              ? `Tidak ditemukan artikel untuk kata kunci "${searchQuery}".`
+              : 'Belum ada artikel umum yang dipublikasikan untuk kategori ini.'}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {filteredArticles.map(art => (
               <Card
                 key={art.id}
-                className="p-6 flex flex-col justify-between border-slate-200/80 hover:border-sky-300 hover:shadow-md transition-all"
+                className="p-6 flex flex-col justify-between border-slate-200/80 hover:border-sky-300 hover:shadow-md transition-all bg-white"
               >
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <Badge variant="secondary" size="sm">
-                      {art.category || 'EDUKASI'}
+                      {art.category || 'UMUM'}
                     </Badge>
                     <span className="text-[11px] text-slate-400">
                       {formatDateIndonesian(art.created_at)}
@@ -485,7 +465,7 @@ export default function PublicEducationPage() {
                   </p>
                 </div>
                 <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-sky-600">
-                  <span>Ditulis oleh: {art.created_by || 'Tim UKS'}</span>
+                  <span>Ditulis oleh: {art.created_by || 'Tim Penulis'}</span>
                 </div>
               </Card>
             ))}
@@ -493,18 +473,18 @@ export default function PublicEducationPage() {
         )}
       </section>
 
-      {/* 6. BUKU PANDUAN TERPADU UKS (PDF DOWNLOAD) */}
+      {/* 5. BUKU PANDUAN RESMI (PDF DOWNLOAD) */}
       <section className="p-6 sm:p-8 rounded-3xl bg-slate-900 text-white border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div className="flex flex-col gap-2 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full text-xs font-bold uppercase tracking-wider w-fit">
             <BookOpen className="w-3.5 h-3.5" />
-            <span>Dokumen Panduan Resmi UKS</span>
+            <span>Dokumen Panduan Resmi</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-white font-display">
-            Panduan Terpadu UKS: Pengukuran Status Gizi dan Skrining Kesehatan Remaja di Sekolah Menengah Atas
+            Panduan Terpadu: Pengukuran Status Gizi dan Skrining Kesehatan Remaja di Sekolah
           </h2>
           <p className="text-xs text-slate-300 leading-relaxed">
-            Format resmi pedoman teknis pengukuran antropometri (TB, BB, Standar WHO), kalibrasi alat ukur, skrining Hb, serta tata laksana kepatuhan konsumsi TTD bagi tim UKS sekolah.
+            Format resmi pedoman teknis pengukuran antropometri (TB, BB, Standar WHO), pemantauan kesehatan, serta tata laksana pembiasaan hidup sehat bagi sekolah.
           </p>
         </div>
 
