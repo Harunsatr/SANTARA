@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   Card,
   Badge,
@@ -13,6 +14,7 @@ import { fetchExaminations, fetchClasses, fetchTTD } from '@/lib/api';
 import { filterValidClasses } from '@/lib/adapters';
 import { normalizeNutritionStatus, NUTRITION_STYLES } from '@/lib/utils/nutrition';
 import { calculatePercentage } from '@/lib/utils/number';
+import { useSession } from '@/context/SessionContext';
 import {
   BarChart3,
   ShieldCheck,
@@ -23,6 +25,9 @@ import {
   Users,
   Pill,
   CheckCircle2,
+  Lock,
+  LogIn,
+  ArrowLeft,
 } from 'lucide-react';
 import { Examination, ClassRoom, TTDRecord } from '@/types/models';
 
@@ -53,6 +58,8 @@ interface ClassTTDAggregate {
 }
 
 export default function PublicGrafikPage() {
+  const { isAuthenticated, isReady } = useSession();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeGrade, setActiveGrade] = useState<string>('ALL');
@@ -85,6 +92,11 @@ export default function PublicGrafikPage() {
     let ignore = false;
 
     async function loadAndAggregate() {
+      if (!isAuthenticated) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const [examsRes, classesRes, ttdRes] = await Promise.all([
           fetchExaminations(),
@@ -238,7 +250,55 @@ export default function PublicGrafikPage() {
     return () => {
       ignore = true;
     };
-  }, [refreshTrigger]);
+  }, [refreshTrigger, isAuthenticated]);
+
+  if (!isReady) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-20">
+        <LoadingState text="Memeriksa izin akses sesi..." />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-16 sm:py-24 flex flex-col items-center text-center gap-6">
+        <div className="w-16 h-16 rounded-3xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-sm">
+          <Lock className="w-8 h-8" />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold uppercase tracking-wider mx-auto">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Akses Terbatas — Khusus Pengguna Resmi</span>
+          </div>
+          <h1 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight font-display">
+            Silakan Masuk Terlebih Dahulu
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-lg mx-auto">
+            Data pemantauan status gizi siswa (Standar WHO) dan kepatuhan konsumsi Tablet Tambah Darah (TTD) hanya dapat diakses setelah melakukan autentikasi akun resmi (<strong>Kader SATRIA</strong> atau <strong>Kepala Sekolah</strong>).
+          </p>
+        </div>
+
+        <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/90 shadow-sm flex flex-col gap-3">
+          <Link
+            href="/login"
+            className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm shadow-md hover:shadow-sky-500/20 transition-all active:scale-95"
+          >
+            <LogIn className="w-4 h-4" />
+            <span>Masuk ke Akun Anda</span>
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors pt-2"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Kembali ke Halaman Utama</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const currentDisplay =
     activeGrade === 'ALL'
@@ -260,7 +320,7 @@ export default function PublicGrafikPage() {
         <div className="flex flex-col gap-2 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold uppercase tracking-wider w-fit">
             <BarChart3 className="w-3.5 h-3.5" />
-            <span>Statistik Publik Teragregasi</span>
+            <span>Statistik Pemantauan Kesehatan</span>
           </div>
           <h1 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight font-display">
             Grafik Distribusi Status Gizi Remaja SMA
