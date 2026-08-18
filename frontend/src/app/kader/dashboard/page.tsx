@@ -23,7 +23,7 @@ import { calculateNutritionDistribution, calculateTTDCompliance } from '@/lib/ut
 import { NUTRITION_STYLES } from '@/lib/utils/nutrition';
 import { formatDateIndonesian } from '@/lib/utils/date';
 import { useSession } from '@/context/SessionContext';
-import { normalizeRole, getRoleLabel } from '@/lib/auth/roleGuard';
+import { normalizeRole, getRoleLabel, formatRoleDisplayName } from '@/lib/auth/roleGuard';
 import {
   Student,
   ExaminationWithLiLA,
@@ -133,7 +133,7 @@ export default function KaderDashboardPage() {
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-black text-white font-display">
-            Selamat Datang, {user?.name || user?.userName || 'Pengguna SANTARA'}
+            Selamat Datang, {formatRoleDisplayName(user?.name || user?.userName, userRole)}
           </h1>
 
           <p className="text-xs sm:text-sm text-slate-300 flex items-center gap-1.5">

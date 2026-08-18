@@ -37,6 +37,47 @@ export function getRoleLabel(role: AppRole | string): string {
   return role || 'Pengguna';
 }
 
+/**
+ * Normalizes user display name for presentation:
+ * - Replaces legacy prefix 'Guru' with 'Kader' for KADER role
+ * - Prevents duplicates like 'Kader Kader Satria' or 'Kepala Sekolah Kepala Sekolah'
+ */
+export function formatRoleDisplayName(rawName?: string, rawRole?: AppRole | string | null): string {
+  if (!rawName || rawName.trim() === '') {
+    return 'Pengguna SANTARA';
+  }
+
+  const role = normalizeRole(String(rawRole || ''));
+  let cleanName = rawName.trim();
+
+  // Strip leading legacy/duplicate prefixes case-insensitively
+  cleanName = cleanName.replace(/^(guru|kader|kepala\s+sekolah)\s+/gi, '');
+  // Run a second time to catch nested prefixes e.g. "Kader Kader Satria" or "Guru Kader Satria"
+  cleanName = cleanName.replace(/^(guru|kader|kepala\s+sekolah)\s+/gi, '');
+  cleanName = cleanName.trim();
+
+  if (!cleanName) {
+    return role ? getRoleLabel(role) : 'Pengguna SANTARA';
+  }
+
+  if (role === 'KADER') {
+    return `Kader ${cleanName}`;
+  }
+
+  if (role === 'KEPALA_SEKOLAH') {
+    if (cleanName.toLowerCase() === 'kepala sekolah' || cleanName.toLowerCase() === 'admin') {
+      return 'Kepala Sekolah';
+    }
+    return `Kepala Sekolah ${cleanName}`;
+  }
+
+  if (role === 'SISWA') {
+    return cleanName;
+  }
+
+  return cleanName;
+}
+
 // ============================================================
 // AUTHORIZATION MATRIX
 // ============================================================

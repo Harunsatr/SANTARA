@@ -26,7 +26,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { useSession } from '@/context/SessionContext';
-import { normalizeRole, getRoleLabel } from '@/lib/auth/roleGuard';
+import { normalizeRole, getRoleLabel, formatRoleDisplayName } from '@/lib/auth/roleGuard';
 
 export function KaderNavbar() {
   const pathname = usePathname();
@@ -61,7 +61,7 @@ export function KaderNavbar() {
     ? [...baseNavLinks, ...kepalaSekolahNavLinks]
     : baseNavLinks;
 
-  const displayName = user?.userName || user?.name || 'Pengguna SANTARA';
+  const displayName = formatRoleDisplayName(user?.userName || user?.name, role);
   const displayRole = getRoleLabel(role || user?.role || '');
 
   return (
