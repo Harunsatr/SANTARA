@@ -10,8 +10,9 @@ import {
   LoadingState,
   ErrorState,
   Alert,
+  Input,
 } from '@/components/ui';
-import { fetchExaminations, fetchClasses, fetchTTD } from '@/lib/api';
+import { fetchExaminations, fetchClasses, fetchTTD, createClass } from '@/lib/api';
 import { filterValidClasses } from '@/lib/adapters';
 import { normalizeNutritionStatus, NUTRITION_STYLES, NutritionCategoryStyle } from '@/lib/utils/nutrition';
 import { calculatePercentage } from '@/lib/utils/number';
@@ -29,6 +30,8 @@ import {
   LogIn,
   ArrowLeft,
   AlertCircle,
+  PlusCircle,
+  X,
 } from 'lucide-react';
 import { Examination, ClassRoom, TTDRecord } from '@/types/models';
 
@@ -73,15 +76,25 @@ const CATEGORY_KEYS: {
 ];
 
 export default function ProtectedGrafikPage() {
-  const { isAuthenticated, isReady } = useSession();
+  const { user, isAuthenticated, isReady } = useSession();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeGrade, setActiveGrade] = useState<string>('ALL');
 
-  // Dynamic Grade List from Database (default fallback 10, 11, 12)
+  // Dynamic Grade List from Database (defaults to at least 10, 11, 12)
   const [availableGrades, setAvailableGrades] = useState<string[]>(['10', '11', '12']);
+  const [allClasses, setAllClasses] = useState<ClassRoom[]>([]);
+
+  // Modal State for Add Class
+  const [isAddClassOpen, setIsAddClassOpen] = useState(false);
+  const [newClassName, setNewClassName] = useState('');
+  const [newGrade, setNewGrade] = useState('11');
+  const [newAcademicYear, setNewAcademicYear] = useState(`${new Date().getFullYear()}/${new Date().getFullYear() + 1}`);
+  const [submittingClass, setSubmittingClass] = useState(false);
+  const [addClassError, setAddClassError] = useState<string | null>(null);
+  const [addClassSuccess, setAddClassSuccess] = useState<string | null>(null);
 
   // Aggregated Nutrition Data State (Strictly Non-Personal)
   const [overallAggregate, setOverallAggregate] = useState<GradeNutritionAggregate>({
@@ -138,6 +151,7 @@ export default function ProtectedGrafikPage() {
           const exams: Examination[] = examsRes.data || [];
           const rawClasses: ClassRoom[] = classesRes.success ? classesRes.data : [];
           const validClasses = filterValidClasses(rawClasses);
+          setAllClasses(validClasses);
           const ttdRecords: TTDRecord[] = ttdRes.success ? ttdRes.data : [];
 
           // Map class ID to grade level and class name
@@ -147,14 +161,14 @@ export default function ProtectedGrafikPage() {
 
           validClasses.forEach(c => {
             if (c.id) {
-              const gr = String(c.grade || '10');
+              const gr = String(c.grade || '').trim() || (c.class_name.match(/\d+/)?.[0] || '10');
               classGradeMap.set(c.id, gr);
-              classNameMap.set(c.id, c.class_name || `Kelas ${c.grade}`);
+              classNameMap.set(c.id, c.class_name || `Kelas ${gr}`);
               detectedGrades.add(gr);
             }
           });
 
-          // Sort available grades dynamically
+          // Sort available grades dynamically (10, 11, 12, 13, ...)
           const sortedGrades = Array.from(detectedGrades).sort((a, b) => Number(a) - Number(b));
           setAvailableGrades(sortedGrades);
 
@@ -275,6 +289,59 @@ export default function ProtectedGrafikPage() {
     };
   }, [refreshTrigger, isAuthenticated]);
 
+  const handleAddClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddClassError(null);
+    setAddClassSuccess(null);
+
+    const name = newClassName.trim();
+    const gr = newGrade.trim();
+
+    if (!name && !gr) {
+      setAddClassError('Nama kelas atau tingkat wajib diisi');
+      return;
+    }
+
+    const finalName = name || `Kelas ${gr}`;
+
+    // Duplicate check on client
+    const isDup = allClasses.some(
+      c => c.class_name.toLowerCase() === finalName.toLowerCase()
+    );
+    if (isDup) {
+      setAddClassError(`Kelas "${finalName}" sudah terdaftar di database 03_CLASSES.`);
+      return;
+    }
+
+    setSubmittingClass(true);
+
+    try {
+      const res = await createClass({
+        class_name: finalName,
+        grade: gr,
+        academic_year: newAcademicYear,
+        school_id: user?.schoolId || 'SCH001',
+      });
+
+      if (res.success) {
+        setAddClassSuccess(`Kelas "${finalName}" berhasil ditambahkan ke database Google Sheets.`);
+        setNewClassName('');
+        setTimeout(() => {
+          setIsAddClassOpen(false);
+          setAddClassSuccess(null);
+          setLoading(true);
+          setRefreshTrigger(prev => prev + 1);
+        }, 1200);
+      } else {
+        setAddClassError(res.message || 'Gagal menambahkan kelas baru');
+      }
+    } catch (err) {
+      setAddClassError(err instanceof Error ? err.message : 'Terjadi kesalahan sistem');
+    } finally {
+      setSubmittingClass(false);
+    }
+  };
+
   // Loading Session Validation
   if (!isReady) {
     return (
@@ -357,27 +424,41 @@ export default function ProtectedGrafikPage() {
           </p>
         </div>
 
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            setLoading(true);
-            setRefreshTrigger(prev => prev + 1);
-          }}
-          isLoading={loading}
-          leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
-          className="shrink-0"
-        >
-          Perbarui Data
-        </Button>
+        <div className="flex items-center gap-3 shrink-0">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setLoading(true);
+              setRefreshTrigger(prev => prev + 1);
+            }}
+            isLoading={loading}
+            leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+          >
+            Perbarui Data
+          </Button>
+
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={() => {
+              setAddClassError(null);
+              setAddClassSuccess(null);
+              setIsAddClassOpen(true);
+            }}
+            leftIcon={<PlusCircle className="w-3.5 h-3.5" />}
+          >
+            Tambah Kelas
+          </Button>
+        </div>
       </section>
 
       {/* 2. SECURITY & PRIVACY BADGE */}
-      <Alert variant="info" title="Otorisasi Akses Internal">
+      <Alert variant="info" title="Otorisasi Akses Internal Terverifikasi">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-sky-600 shrink-0" />
           <span className="text-xs sm:text-sm text-sky-950">
-            Halaman ini terproteksi untuk <strong>Kader SATRIA</strong> dan <strong>Kepala Sekolah</strong>. Data agregat disajikan per tingkat kelas tanpa mempublikasikan identitas pribadi siswa.
+            Halaman ini terproteksi untuk <strong>Kader SATRIA</strong> dan <strong>Kepala Sekolah</strong>. Data agregat disajikan per tingkat kelas secara dinamis dari basis data <code>03_CLASSES</code> dan <code>05_EXAMINATIONS</code>.
           </span>
         </div>
       </Alert>
@@ -390,7 +471,7 @@ export default function ProtectedGrafikPage() {
         <ErrorState message={error} onRetry={() => setRefreshTrigger(prev => prev + 1)} />
       ) : (
         <>
-          {/* 3. DYNAMIC GRADE LEVEL TABS */}
+          {/* 3. DYNAMIC GRADE LEVEL TABS & TAMBAH KELAS */}
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -401,7 +482,7 @@ export default function ProtectedGrafikPage() {
               </span>
             </div>
 
-            <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl w-fit overflow-x-auto max-w-full border border-slate-200/80">
+            <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-100 rounded-2xl w-fit max-w-full border border-slate-200/80">
               {[
                 { id: 'ALL', label: 'Semua Tingkat (Gabungan)' },
                 ...availableGrades.map(g => ({ id: g, label: `Kelas ${g}` })),
@@ -418,6 +499,15 @@ export default function ProtectedGrafikPage() {
                   {tab.label}
                 </button>
               ))}
+
+              <button
+                type="button"
+                onClick={() => setIsAddClassOpen(true)}
+                className="px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl text-sky-700 hover:bg-sky-50 border border-dashed border-sky-300 transition-colors flex items-center gap-1.5 shrink-0"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>+ Tambah Kelas</span>
+              </button>
             </div>
           </div>
 
@@ -643,7 +733,7 @@ export default function ProtectedGrafikPage() {
                     Tabel Perbandingan Status Gizi Antar Tingkat Kelas (Standar WHO)
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Agregasi lengkap perbandingan tingkat Kelas 10, 11, dan 12
+                    Agregasi lengkap perbandingan tingkat Kelas 10, 11, 12, dan tingkat kelas lainnya
                   </p>
                 </div>
               </div>
@@ -870,6 +960,99 @@ export default function ProtectedGrafikPage() {
             </div>
           </section>
         </>
+      )}
+
+      {/* 7. MODAL TAMBAH KELAS (INTEGRATED TO 03_CLASSES) */}
+      {isAddClassOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-sky-50 text-sky-600">
+                  <PlusCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Tambah Kelas Baru</h3>
+                  <p className="text-xs text-slate-500">Database Master 03_CLASSES</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddClassOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {addClassError && (
+              <Alert variant="error" title="Gagal Menyimpan">
+                <span className="text-xs text-rose-950">{addClassError}</span>
+              </Alert>
+            )}
+
+            {addClassSuccess && (
+              <Alert variant="success" title="Berhasil">
+                <span className="text-xs text-emerald-950">{addClassSuccess}</span>
+              </Alert>
+            )}
+
+            <form onSubmit={handleAddClass} className="flex flex-col gap-4">
+              <Input
+                label="Nama Kelas"
+                placeholder="Contoh: Kelas 11 A, Kelas 12"
+                value={newClassName}
+                onChange={e => setNewClassName(e.target.value)}
+                helperText="Nama rombel atau tingkat kelas."
+                required
+              />
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-700">Tingkat / Grade</label>
+                <select
+                  value={newGrade}
+                  onChange={e => setNewGrade(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                >
+                  <option value="10">Tingkat 10 (Kelas 10)</option>
+                  <option value="11">Tingkat 11 (Kelas 11)</option>
+                  <option value="12">Tingkat 12 (Kelas 12)</option>
+                  <option value="13">Tingkat 13 (Kelas 13)</option>
+                  <option value="14">Tingkat 14 (Kelas 14)</option>
+                </select>
+              </div>
+
+              <Input
+                label="Tahun Ajaran"
+                placeholder="2025/2026"
+                value={newAcademicYear}
+                onChange={e => setNewAcademicYear(e.target.value)}
+                helperText="Periode tahun ajaran kelas."
+              />
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAddClassOpen(false)}
+                  disabled={submittingClass}
+                >
+                  Batal
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  isLoading={submittingClass}
+                  leftIcon={<PlusCircle className="w-4 h-4" />}
+                >
+                  Simpan ke Database
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

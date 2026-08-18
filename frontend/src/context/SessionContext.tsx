@@ -1,22 +1,5 @@
 'use client';
 
-// PROTOTYPE ONLY
-// This session mechanism is NOT production authentication.
-// Production authentication requires server-side authentication,
-// password hashing, secure token/session management,
-// authorization, and backend access control.
-
-/**
- * SANTARA Session Context (Prototype Session)
- *
- * NOTICE: AUTHENTICATION NOT IMPLEMENTED IN PHASE 1 BACKEND.
- * This context manages client-side active profile switching for all 3 roles
- * (ADMIN, GURU, SISWA) and route-based access control for prototyping.
- * Marker: PROTOTYPE_SESSION (Auth backend required for production security).
- *
- * Uses useSyncExternalStore for hydration-safe localStorage synchronization.
- */
-
 import React, {
   createContext,
   useContext,
@@ -35,6 +18,11 @@ import {
   getDefaultRoute,
   normalizeRole,
 } from '@/lib/auth/roleGuard';
+import {
+  getClientSessionCookie,
+  setClientSessionCookie,
+  syncServerSession,
+} from '@/lib/auth/cookies';
 
 interface SessionContextType {
   user: PrototypeSession | null;
@@ -44,22 +32,28 @@ interface SessionContextType {
   logout: () => void;
 }
 
-// Storage key kept same for backward compat — avoids forced re-login on deploy
 const STORAGE_KEY = 'santara_kader_session';
 
-// Cache to maintain referential equality during getSnapshot
+// In-memory session cache
 let memorySession: PrototypeSession | null = null;
-let lastRaw: string | null = null;
+let isInitialized = false;
 
 const listeners = new Set<() => void>();
 
+function notifyListeners() {
+  listeners.forEach(listener => listener());
+}
+
 function subscribe(callback: () => void) {
   listeners.add(callback);
+
   const handleStorage = (e: StorageEvent) => {
     if (e.key === STORAGE_KEY) {
+      readSessionFromAnySource();
       callback();
     }
   };
+
   window.addEventListener('storage', handleStorage);
   return () => {
     listeners.delete(callback);
@@ -67,35 +61,48 @@ function subscribe(callback: () => void) {
   };
 }
 
-function getSnapshot(): PrototypeSession | null {
+function readSessionFromAnySource(): PrototypeSession | null {
   if (typeof window === 'undefined') return null;
+
+  // 1. Try reading from Document Cookie first
+  const cookieSession = getClientSessionCookie();
+  if (cookieSession) {
+    const val = validateSessionObject(cookieSession);
+    if (val.isValid && val.session) {
+      memorySession = val.session;
+      isInitialized = true;
+      return memorySession;
+    }
+  }
+
+  // 2. Fallback to localStorage
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw !== lastRaw) {
-      lastRaw = raw;
-      if (!raw) {
-        memorySession = null;
-      } else {
-        const parsed = JSON.parse(raw);
-        const validation = validateSessionObject(parsed);
-        if (validation.isValid && validation.session) {
-          memorySession = validation.session;
-        } else {
-          // Corrupt or invalid session — clear it
-          localStorage.removeItem(STORAGE_KEY);
-          memorySession = null;
-          lastRaw = null;
-        }
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const val = validateSessionObject(parsed);
+      if (val.isValid && val.session) {
+        memorySession = val.session;
+        // Sync back to cookie if missing
+        setClientSessionCookie(memorySession);
+        syncServerSession(memorySession);
+        isInitialized = true;
+        return memorySession;
       }
     }
   } catch {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // ignore
-    }
-    memorySession = null;
-    lastRaw = null;
+    // Ignore parse error
+  }
+
+  memorySession = null;
+  isInitialized = true;
+  return null;
+}
+
+function getSnapshot(): PrototypeSession | null {
+  if (typeof window === 'undefined') return null;
+  if (!isInitialized) {
+    return readSessionFromAnySource();
   }
   return memorySession;
 }
@@ -104,27 +111,31 @@ function getServerSnapshot(): PrototypeSession | null {
   return null;
 }
 
-const emptySubscribe = () => () => {};
-
 function setStoredSession(newSession: PrototypeSession | null) {
   memorySession = newSession;
-  if (newSession) {
-    lastRaw = JSON.stringify(newSession);
+  isInitialized = true;
+
+  // 1. Sync Cookie
+  setClientSessionCookie(newSession);
+  syncServerSession(newSession);
+
+  // 2. Sync localStorage
+  if (typeof window !== 'undefined') {
     try {
-      localStorage.setItem(STORAGE_KEY, lastRaw);
-    } catch {
-      // ignore
-    }
-  } else {
-    lastRaw = null;
-    try {
-      localStorage.removeItem(STORAGE_KEY);
+      if (newSession) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
     } catch {
       // ignore
     }
   }
-  listeners.forEach(listener => listener());
+
+  notifyListeners();
 }
+
+const emptySubscribe = () => () => {};
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
@@ -133,6 +144,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const isReady = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const router = useRouter();
   const pathname = usePathname();
+
+  // Initialize on mount
+  useEffect(() => {
+    readSessionFromAnySource();
+    notifyListeners();
+  }, []);
 
   const loginAs = useCallback(
     (record: User | Student) => {
@@ -161,7 +178,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       pathname.startsWith('/kader') ||
       pathname.startsWith('/admin') ||
       pathname.startsWith('/siswa') ||
-      pathname.startsWith('/grafik');
+      pathname === '/grafik' ||
+      pathname.startsWith('/grafik/');
 
     if (!isProtected) return;
 
@@ -173,14 +191,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (!canAccessRoute(current, pathname)) {
-      // Redirect to the user's allowed home route
       const role = normalizeRole(String(current.role));
       const fallback = getDefaultRoute(role);
       if (pathname !== fallback) {
         router.push(fallback + '?reason=unauthorized');
       }
     }
-  }, [pathname, isReady, router]);
+  }, [pathname, isReady, router, session]);
 
   return (
     <SessionContext.Provider

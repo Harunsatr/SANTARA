@@ -1327,6 +1327,104 @@ function getClasses(params) {
 }
 
 /**
+ * Menambahkan data kelas baru (03_CLASSES).
+ * Data minimal: class_name, grade (opsional: school_id, academic_year).
+ */
+function createClass(data) {
+  if (!data) {
+    return errorResponse("Data kelas wajib diisi", "DATA_REQUIRED");
+  }
+
+  const className = String(data.class_name || "").trim();
+  const rawGrade = String(data.grade || "").trim();
+
+  if (!className && !rawGrade) {
+    return errorResponse("Nama atau tingkat kelas wajib diisi", "REQUIRED_FIELD", { field: "class_name" });
+  }
+
+  // Resolving school_id with fallback to first school or SCH001
+  let schoolId = data.school_id ? String(data.school_id).trim() : "";
+  if (!schoolId) {
+    const schoolsSheet = getSheet(SHEETS.SCHOOLS);
+    if (schoolsSheet && schoolsSheet.getLastRow() > 1) {
+      const firstSchool = schoolsSheet.getRange(2, 1).getValue();
+      schoolId = String(firstSchool).trim() || "SCH001";
+    } else {
+      schoolId = "SCH001";
+    }
+  }
+
+  // Format grade number (e.g. "11", "12")
+  let grade = rawGrade;
+  if (!grade) {
+    const match = className.match(/\d+/);
+    grade = match ? match[0] : "10";
+  }
+
+  const finalClassName = className || `Kelas ${grade}`;
+
+  const sheet = getSheet(SHEETS.CLASSES);
+  if (!sheet) {
+    return errorResponse("Sheet 03_CLASSES tidak ditemukan", "SHEET_NOT_FOUND");
+  }
+
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0];
+  const schoolIdIndex = headers.indexOf("school_id");
+  const classNameIndex = headers.indexOf("class_name");
+  const gradeIndex = headers.indexOf("grade");
+
+  // Duplicate Check: Same school, same normalized class name or grade
+  const isDuplicate = values.slice(1).some(row => {
+    const rSchool = String(row[schoolIdIndex] || "").trim();
+    const rName = String(row[classNameIndex] || "").trim().toLowerCase();
+    const rGrade = String(row[gradeIndex] || "").trim();
+
+    if (rSchool === schoolId) {
+      if (rName === finalClassName.toLowerCase()) return true;
+      if (gradeIndex !== -1 && rGrade === grade && rName === finalClassName.toLowerCase()) return true;
+    }
+    return false;
+  });
+
+  if (isDuplicate) {
+    return errorResponse(`Kelas "${finalClassName}" sudah terdaftar pada sekolah ini`, "DUPLICATE_CLASS");
+  }
+
+  const newId = generateNextId(SHEETS.CLASSES, ID_PREFIXES[SHEETS.CLASSES]);
+  const now = new Date().toISOString();
+
+  const newRecord = {
+    id: newId,
+    school_id: schoolId,
+    class_name: finalClassName,
+    grade: grade,
+    academic_year: data.academic_year ? String(data.academic_year).trim() : `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
+    address: data.address ? String(data.address).trim() : "",
+    status: "active",
+    created_at: now,
+    updated_at: now
+  };
+
+  const row = headers.map(header => {
+    return newRecord[header] !== undefined ? newRecord[header] : "";
+  });
+
+  sheet.appendRow(row);
+
+  // Audit Log
+  createAuditLog({
+    user_id: data.user_id || data.created_by || "",
+    action: "CREATE",
+    table_name: SHEETS.CLASSES,
+    record_id: newId,
+    description: `Menambahkan kelas baru: ${finalClassName} (Grade ${grade})`
+  });
+
+  return successResponse("Data kelas berhasil ditambahkan", newRecord);
+}
+
+/**
  * Mengambil daftar data pengguna / kader (01_USERS).
  * Query parameter opsional: school_id, role, status.
  */
@@ -1541,6 +1639,10 @@ function doPost(e) {
     }
 
     switch (action) {
+      // Classes
+      case "createClass":
+        return createClass(data);
+
       // Students
       case "createStudent":
         return createStudent(data);
