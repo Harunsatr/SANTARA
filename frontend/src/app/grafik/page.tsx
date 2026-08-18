@@ -29,6 +29,7 @@ import {
   LogIn,
   ArrowLeft,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Examination, ClassRoom, TTDRecord } from '@/types/models';
 
 interface GradeNutritionAggregate {
@@ -59,6 +60,7 @@ interface ClassTTDAggregate {
 
 export default function PublicGrafikPage() {
   const { isAuthenticated, isReady } = useSession();
+  const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +89,12 @@ export default function PublicGrafikPage() {
   const [totalClassesCount, setTotalClassesCount] = useState<number>(0);
 
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  useEffect(() => {
+    if (isReady && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isReady, isAuthenticated, router]);
 
   useEffect(() => {
     let ignore = false;
@@ -326,7 +334,7 @@ export default function PublicGrafikPage() {
             Grafik Distribusi Status Gizi Remaja SMA
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-sans">
-            Visualisasi distribusi status gizi siswa berdasarkan <strong>Standar WHO (IMT/U)</strong> dan data kepatuhan konsumsi Tablet Tambah Darah (TTD). Data disajikan secara agregat untuk menjaga privasi medis siswa.
+            Visualisasi distribusi status gizi siswa berdasarkan <strong>Standar WHO</strong> dan data kepatuhan konsumsi Tablet Tambah Darah (TTD). Data disajikan secara agregat untuk menjaga privasi medis siswa.
           </p>
         </div>
 
@@ -350,7 +358,7 @@ export default function PublicGrafikPage() {
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-sky-600 shrink-0" />
           <span>
-            Halaman publik ini hanya menampilkan ringkasan statistik agregasi sekolah dan per kelas. Tidak ada nama, nomor induk, atau riwayat pemeriksaan perorangan yang dipublikasikan.
+            Halaman ini hanya menampilkan ringkasan statistik agregasi sekolah dan per kelas. Tidak ada nama, nomor induk, atau riwayat pemeriksaan perorangan yang dipublikasikan.
           </span>
         </div>
       </Alert>
@@ -480,7 +488,7 @@ export default function PublicGrafikPage() {
                   <div className="p-3 bg-white rounded-xl border border-sky-100">
                     <span className="text-[11px] text-slate-500 block">Perlu Perhatian</span>
                     <span className="text-2xl font-black text-rose-600">
-                      {currentDisplay.percentages.severelyThinness + currentDisplay.percentages.obese}%
+                      {(Math.round((currentDisplay.percentages.severelyThinness + currentDisplay.percentages.obese) * 10) / 10).toFixed(1)}%
                     </span>
                   </div>
                 </div>
@@ -499,7 +507,7 @@ export default function PublicGrafikPage() {
                   </h4>
                 </div>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Klasifikasi status gizi usia 5-19 tahun menggunakan indeks <strong>IMT/U (BMI-for-age)</strong> dengan satuan Standar Deviasi (SD / Z-score) yang disesuaikan dengan jenis kelamin dan usia detail per bulan.
+                  Klasifikasi status gizi usia 5–19 tahun menggunakan <strong>Standar WHO</strong> dengan satuan Standar Deviasi (SD / Z-score) yang disesuaikan dengan jenis kelamin dan usia detail per bulan.
                 </p>
               </Card>
             </div>

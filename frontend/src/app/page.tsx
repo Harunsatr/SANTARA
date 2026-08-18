@@ -259,15 +259,15 @@ export default function HomePage() {
                   Antropometri & Skrining Kesehatan
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Pengukuran antropometri (TB, BB, IMT/U Standar WHO), Lingkar Lengan Atas (LiLA), serta skrining hemoglobin (Hb) dan tekanan darah berkala oleh kader SATRIA.
+                  Pengukuran antropometri (TB, BB, Standar WHO), Lingkar Lengan Atas (LiLA), serta skrining hemoglobin (Hb) dan tekanan darah berkala oleh kader SATRIA.
                 </p>
               </div>
               <div className="mt-auto pt-2">
                 <Link
-                  href="/grafik"
+                  href="/login"
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700"
                 >
-                  <span>Lihat Grafik Distribusi</span>
+                  <span>Pencatatan &amp; Grafik Status Gizi</span>
                   <ChevronRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -323,7 +323,7 @@ export default function HomePage() {
             <ul className="text-xs sm:text-sm text-slate-300 space-y-2 leading-relaxed">
               <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <span>Melakukan pengukuran status gizi antropometri (TB, BB, IMT/U Standar WHO) dan LiLA secara akurat.</span>
+                <span>Melakukan pengukuran status gizi antropometri (TB, BB, Standar WHO) dan LiLA secara akurat.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />

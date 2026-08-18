@@ -504,7 +504,7 @@ export default function PublicEducationPage() {
             Panduan Terpadu UKS: Pengukuran Status Gizi dan Skrining Kesehatan Remaja di Sekolah Menengah Atas
           </h2>
           <p className="text-xs text-slate-300 leading-relaxed">
-            Format resmi pedoman teknis pengukuran antropometri (TB, BB, IMT/U Standar WHO), kalibrasi alat ukur, skrining Hb, serta tata laksana kepatuhan konsumsi TTD bagi tim UKS sekolah.
+            Format resmi pedoman teknis pengukuran antropometri (TB, BB, Standar WHO), kalibrasi alat ukur, skrining Hb, serta tata laksana kepatuhan konsumsi TTD bagi tim UKS sekolah.
           </p>
         </div>
 

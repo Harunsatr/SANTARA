@@ -61,7 +61,7 @@ export const OFFICIAL_PROGRAM_ACTIVITIES: ActivityPhoto[] = [
     title: 'Workshop II — Praktik Pengukuran Antropometri & Standar WHO',
     category: 'pengukuran',
     activityDate: '2024-08-12',
-    description: 'Pelatihan teknis pengukuran tinggi badan, berat badan, LiLA, dan evaluasi IMT/U.',
+    description: 'Pelatihan teknis pengukuran tinggi badan, berat badan, LiLA, dan evaluasi Standar WHO.',
     location: 'Ruang UKS SMAN 1 Kota Batu',
   },
   {
