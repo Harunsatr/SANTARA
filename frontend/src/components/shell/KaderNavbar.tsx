@@ -23,6 +23,7 @@ import {
   X,
   UserCheck,
   ShieldCheck,
+  BarChart3,
 } from 'lucide-react';
 import { useSession } from '@/context/SessionContext';
 import { normalizeRole, getRoleLabel } from '@/lib/auth/roleGuard';
@@ -37,6 +38,7 @@ export function KaderNavbar() {
   // Base navigation links — available to KEPALA_SEKOLAH and KADER
   const baseNavLinks = [
     { href: '/kader/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { href: '/grafik', label: 'Grafik Status Gizi', icon: <BarChart3 className="w-4 h-4" /> },
     { href: '/kader/status-gizi', label: 'Status Gizi', icon: <Activity className="w-4 h-4" /> },
     { href: '/kader/skrining', label: 'Skrining', icon: <Stethoscope className="w-4 h-4" /> },
     { href: '/kader/ttd', label: 'TTD', icon: <Pill className="w-4 h-4" /> },

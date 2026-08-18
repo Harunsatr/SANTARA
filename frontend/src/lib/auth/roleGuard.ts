@@ -61,8 +61,8 @@ export function canAccessRoute(
   const rawRole = String(user.role || '').trim();
   const role = normalizeRole(rawRole);
 
-  // Area kerja KEPALA_SEKOLAH + KADER
-  if (pathname.startsWith('/kader')) {
+  // Area kerja KEPALA_SEKOLAH + KADER (Dashboard, Modul Input, dan Grafik Status Gizi)
+  if (pathname.startsWith('/kader') || pathname === '/grafik' || pathname.startsWith('/grafik/')) {
     return role === 'KEPALA_SEKOLAH' || role === 'ADMIN' || role === 'KADER';
   }
 

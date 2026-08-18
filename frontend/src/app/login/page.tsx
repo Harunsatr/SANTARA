@@ -143,10 +143,10 @@ function LoginContent() {
         )}
 
         {reason === 'unauthorized' && (
-          <Alert variant="error" title="Akses Ditolak">
-            <div className="flex items-center gap-2 text-xs text-rose-900">
-              <Lock className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>Anda tidak memiliki izin akses ke modul ini.</span>
+          <Alert variant="warning" title="Perlu Masuk Akun">
+            <div className="flex items-center gap-2 text-xs text-amber-950">
+              <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Silakan masuk terlebih dahulu dengan akun resmi (Kader SATRIA atau Kepala Sekolah) untuk mengakses halaman tersebut.</span>
             </div>
           </Alert>
         )}

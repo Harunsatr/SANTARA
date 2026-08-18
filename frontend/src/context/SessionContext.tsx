@@ -160,14 +160,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const isProtected =
       pathname.startsWith('/kader') ||
       pathname.startsWith('/admin') ||
-      pathname.startsWith('/siswa');
+      pathname.startsWith('/siswa') ||
+      pathname.startsWith('/grafik');
 
     if (!isProtected) return;
 
     const current = getSnapshot();
 
     if (!current) {
-      router.push('/login?reason=invalid_session');
+      router.push('/login');
       return;
     }
 
