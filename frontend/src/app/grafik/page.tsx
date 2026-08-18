@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Card,
   Badge,
@@ -12,7 +13,7 @@ import {
 } from '@/components/ui';
 import { fetchExaminations, fetchClasses, fetchTTD } from '@/lib/api';
 import { filterValidClasses } from '@/lib/adapters';
-import { normalizeNutritionStatus, NUTRITION_STYLES } from '@/lib/utils/nutrition';
+import { normalizeNutritionStatus, NUTRITION_STYLES, NutritionCategoryStyle } from '@/lib/utils/nutrition';
 import { calculatePercentage } from '@/lib/utils/number';
 import { useSession } from '@/context/SessionContext';
 import {
@@ -21,19 +22,19 @@ import {
   RefreshCw,
   Info,
   Layers,
-  PieChart,
   Users,
   Pill,
   CheckCircle2,
   Lock,
   LogIn,
   ArrowLeft,
+  AlertCircle,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { Examination, ClassRoom, TTDRecord } from '@/types/models';
 
 interface GradeNutritionAggregate {
   gradeLabel: string;
+  gradeKey: string;
   total: number;
   severelyThinness: number;
   thinness: number;
@@ -58,7 +59,20 @@ interface ClassTTDAggregate {
   complianceRate: number;
 }
 
-export default function PublicGrafikPage() {
+const CATEGORY_KEYS: {
+  key: 'severelyThinness' | 'thinness' | 'normal' | 'overweight' | 'obese';
+  label: string;
+  shortLabel: string;
+  style: NutritionCategoryStyle;
+}[] = [
+  { key: 'severelyThinness', label: 'Gizi Sangat Kurang', shortLabel: 'Sangat Kurang', style: NUTRITION_STYLES['Severely Thinness'] },
+  { key: 'thinness', label: 'Gizi Kurang', shortLabel: 'Kurus', style: NUTRITION_STYLES['Thinness'] },
+  { key: 'normal', label: 'Gizi Normal', shortLabel: 'Normal', style: NUTRITION_STYLES['Normal'] },
+  { key: 'overweight', label: 'Gizi Lebih', shortLabel: 'Lebih', style: NUTRITION_STYLES['Overweight'] },
+  { key: 'obese', label: 'Obesitas', shortLabel: 'Obesitas', style: NUTRITION_STYLES['Obese'] },
+];
+
+export default function ProtectedGrafikPage() {
   const { isAuthenticated, isReady } = useSession();
   const router = useRouter();
 
@@ -66,12 +80,13 @@ export default function PublicGrafikPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeGrade, setActiveGrade] = useState<string>('ALL');
 
-  // Dynamic Grade List from Database
+  // Dynamic Grade List from Database (default fallback 10, 11, 12)
   const [availableGrades, setAvailableGrades] = useState<string[]>(['10', '11', '12']);
 
   // Aggregated Nutrition Data State (Strictly Non-Personal)
   const [overallAggregate, setOverallAggregate] = useState<GradeNutritionAggregate>({
     gradeLabel: 'Seluruh Siswa',
+    gradeKey: 'ALL',
     total: 0,
     severelyThinness: 0,
     thinness: 0,
@@ -90,6 +105,7 @@ export default function PublicGrafikPage() {
 
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  // Route-Level Authorization Check
   useEffect(() => {
     if (isReady && !isAuthenticated) {
       router.replace('/login');
@@ -127,7 +143,7 @@ export default function PublicGrafikPage() {
           // Map class ID to grade level and class name
           const classGradeMap = new Map<string, string>();
           const classNameMap = new Map<string, string>();
-          const detectedGrades = new Set<string>();
+          const detectedGrades = new Set<string>(['10', '11', '12']); // Guarantee standard 10, 11, 12
 
           validClasses.forEach(c => {
             if (c.id) {
@@ -140,9 +156,7 @@ export default function PublicGrafikPage() {
 
           // Sort available grades dynamically
           const sortedGrades = Array.from(detectedGrades).sort((a, b) => Number(a) - Number(b));
-          if (sortedGrades.length > 0) {
-            setAvailableGrades(sortedGrades);
-          }
+          setAvailableGrades(sortedGrades);
 
           // 1. Compute Overall and Grade-Level Nutrition Aggregates
           const overallCounts = { severelyThinness: 0, thinness: 0, normal: 0, overweight: 0, obese: 0, total: 0 };
@@ -181,8 +195,9 @@ export default function PublicGrafikPage() {
           });
 
           // Helper to build aggregate record
-          const makeAggregate = (label: string, counts: typeof overallCounts): GradeNutritionAggregate => ({
+          const makeAggregate = (label: string, key: string, counts: typeof overallCounts): GradeNutritionAggregate => ({
             gradeLabel: label,
+            gradeKey: key,
             total: counts.total,
             severelyThinness: counts.severelyThinness,
             thinness: counts.thinness,
@@ -198,11 +213,11 @@ export default function PublicGrafikPage() {
             },
           });
 
-          setOverallAggregate(makeAggregate('Seluruh Siswa', overallCounts));
+          setOverallAggregate(makeAggregate('Seluruh Siswa', 'ALL', overallCounts));
 
           const builtGradeAggregates: Record<string, GradeNutritionAggregate> = {};
           sortedGrades.forEach(g => {
-            builtGradeAggregates[g] = makeAggregate(`Kelas ${g}`, byGrade[g] || overallCounts);
+            builtGradeAggregates[g] = makeAggregate(`Kelas ${g}`, g, byGrade[g] || { severelyThinness: 0, thinness: 0, normal: 0, overweight: 0, obese: 0, total: 0 });
           });
           setGradeAggregates(builtGradeAggregates);
 
@@ -260,14 +275,16 @@ export default function PublicGrafikPage() {
     };
   }, [refreshTrigger, isAuthenticated]);
 
+  // Loading Session Validation
   if (!isReady) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20">
-        <LoadingState text="Memeriksa izin akses sesi..." />
+        <LoadingState text="Memeriksa izin otorisasi sesi..." />
       </div>
     );
   }
 
+  // Unauthorized Fallback View (Shown while redirecting or if blocked)
   if (!isAuthenticated) {
     return (
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-16 sm:py-24 flex flex-col items-center text-center gap-6">
@@ -284,7 +301,7 @@ export default function PublicGrafikPage() {
             Silakan Masuk Terlebih Dahulu
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-lg mx-auto">
-            Data pemantauan status gizi siswa (Standar WHO) dan kepatuhan konsumsi Tablet Tambah Darah (TTD) hanya dapat diakses setelah melakukan autentikasi akun resmi (<strong>Kader SATRIA</strong> atau <strong>Kepala Sekolah</strong>).
+            Halaman Grafik Status Gizi dan kepatuhan konsumsi Tablet Tambah Darah (TTD) hanya dapat diakses setelah melakukan autentikasi akun resmi (<strong>Kader SATRIA</strong> atau <strong>Kepala Sekolah</strong>).
           </p>
         </div>
 
@@ -313,28 +330,30 @@ export default function PublicGrafikPage() {
       ? overallAggregate
       : gradeAggregates[activeGrade] || overallAggregate;
 
-  const categories = [
-    { key: 'severelyThinness', label: 'Gizi Sangat Kurang', style: NUTRITION_STYLES['Severely Thinness'], count: currentDisplay.severelyThinness, pct: currentDisplay.percentages.severelyThinness },
-    { key: 'thinness', label: 'Gizi Kurang', style: NUTRITION_STYLES['Thinness'], count: currentDisplay.thinness, pct: currentDisplay.percentages.thinness },
-    { key: 'normal', label: 'Gizi Normal', style: NUTRITION_STYLES['Normal'], count: currentDisplay.normal, pct: currentDisplay.percentages.normal },
-    { key: 'overweight', label: 'Gizi Lebih', style: NUTRITION_STYLES['Overweight'], count: currentDisplay.overweight, pct: currentDisplay.percentages.overweight },
-    { key: 'obese', label: 'Obesitas', style: NUTRITION_STYLES['Obese'], count: currentDisplay.obese, pct: currentDisplay.percentages.obese },
-  ];
+  // Compute maximum count for responsive Bar Chart scaling
+  const maxCategoryCount = Math.max(
+    ...CATEGORY_KEYS.map(c => currentDisplay[c.key]),
+    5 // Minimum Y-axis ceiling
+  );
+
+  const attentionPercentage = Number(
+    (Math.round((currentDisplay.percentages.severelyThinness + currentDisplay.percentages.obese) * 10) / 10).toFixed(1)
+  );
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex flex-col gap-10 sm:gap-14">
-      {/* 1. HEADER & PRIVACY NOTICE */}
+      {/* 1. HEADER & ACTIONS */}
       <section className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex flex-col gap-2 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold uppercase tracking-wider w-fit">
-            <BarChart3 className="w-3.5 h-3.5" />
-            <span>Statistik Pemantauan Kesehatan</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-100 text-sky-900 text-xs font-bold uppercase tracking-wider w-fit">
+            <BarChart3 className="w-3.5 h-3.5 text-sky-700" />
+            <span>Visualisasi Grafik Batang (Bar Chart)</span>
           </div>
           <h1 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight font-display">
-            Grafik Distribusi Status Gizi Remaja SMA
+            Grafik Status Gizi Remaja SMA
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-sans">
-            Visualisasi distribusi status gizi siswa berdasarkan <strong>Standar WHO</strong> dan data kepatuhan konsumsi Tablet Tambah Darah (TTD). Data disajikan secara agregat untuk menjaga privasi medis siswa.
+            Pemantauan distribusi status gizi siswa berdasarkan <strong>Standar WHO</strong> dan kepatuhan konsumsi Tablet Tambah Darah (TTD) terintegrasi dari basis data sekolah.
           </p>
         </div>
 
@@ -353,329 +372,500 @@ export default function PublicGrafikPage() {
         </Button>
       </section>
 
-      {/* 2. PRIVACY ASSURANCE ALERT */}
-      <Alert variant="info" title="Perlindungan Privasi Medis Siswa">
+      {/* 2. SECURITY & PRIVACY BADGE */}
+      <Alert variant="info" title="Otorisasi Akses Internal">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-sky-600 shrink-0" />
-          <span>
-            Halaman ini hanya menampilkan ringkasan statistik agregasi sekolah dan per kelas. Tidak ada nama, nomor induk, atau riwayat pemeriksaan perorangan yang dipublikasikan.
+          <span className="text-xs sm:text-sm text-sky-950">
+            Halaman ini terproteksi untuk <strong>Kader SATRIA</strong> dan <strong>Kepala Sekolah</strong>. Data agregat disajikan per tingkat kelas tanpa mempublikasikan identitas pribadi siswa.
           </span>
         </div>
       </Alert>
 
       {loading ? (
-        <LoadingState variant="table" rows={5} text="Menghitung agregasi statistik status gizi dan TTD..." />
+        <div className="py-12">
+          <LoadingState variant="table" rows={6} text="Memuat dan menghitung agregasi grafik status gizi dari database..." />
+        </div>
       ) : error ? (
         <ErrorState message={error} onRetry={() => setRefreshTrigger(prev => prev + 1)} />
       ) : (
         <>
           {/* 3. DYNAMIC GRADE LEVEL TABS */}
-          <div className="flex items-center gap-2 p-1.5 bg-slate-200/80 rounded-2xl w-fit overflow-x-auto max-w-full">
-            {[
-              { id: 'ALL', label: 'Seluruh Siswa' },
-              ...availableGrades.map(g => ({ id: g, label: `Kelas ${g}` })),
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveGrade(tab.id)}
-                className={`px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all shrink-0 ${
-                  activeGrade === tab.id
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Pilih Tingkat Kelas:
+              </span>
+              <span className="text-xs text-slate-500 font-medium">
+                Tersedia {availableGrades.length} Tingkat Kelas
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl w-fit overflow-x-auto max-w-full border border-slate-200/80">
+              {[
+                { id: 'ALL', label: 'Semua Tingkat (Gabungan)' },
+                ...availableGrades.map(g => ({ id: g, label: `Kelas ${g}` })),
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveGrade(tab.id)}
+                  className={`px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all shrink-0 ${
+                    activeGrade === tab.id
+                      ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* 4. MAIN CHART & STATS CONTAINER */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Visual Bar Chart (Responsive Pure CSS/SVG) */}
-            <Card className="lg:col-span-8 p-6 sm:p-8 flex flex-col gap-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-2">
-                  <PieChart className="w-5 h-5 text-sky-600" />
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                    Distribusi Persentase: {currentDisplay.gradeLabel}
-                  </h2>
+          {/* 4. MAIN BAR CHART (GRAFIK BATANG) CONTAINER */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Primary Bar Chart Card */}
+            <Card className="lg:col-span-8 p-6 sm:p-8 flex flex-col gap-6 bg-white border border-slate-200 shadow-xs">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-sky-50 text-sky-600">
+                    <BarChart3 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                      Distribusi Status Gizi: {currentDisplay.gradeLabel}
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Grafik Batang Jumlah Siswa per Kategori Standar WHO
+                    </p>
+                  </div>
                 </div>
-                <Badge variant="neutral">
-                  Total Terperiksa: {currentDisplay.total} Siswa
+
+                <Badge variant={currentDisplay.total > 0 ? 'primary' : 'neutral'} size="md">
+                  Total: {currentDisplay.total} Siswa Terperiksa
                 </Badge>
               </div>
 
-              {/* Stacked Percentage Bar */}
-              <div className="flex flex-col gap-2">
-                <span className="text-xs font-semibold text-slate-500">Komposisi Populasi Gizi</span>
-                <div className="w-full h-8 bg-slate-100 rounded-xl overflow-hidden flex shadow-inner">
-                  {categories.map(cat => {
-                    if (cat.pct <= 0) return null;
-                    return (
-                      <div
-                        key={cat.key}
-                        style={{
-                          width: `${cat.pct}%`,
-                          backgroundColor: cat.style.color,
-                        }}
-                        className="h-full transition-all duration-500 relative group flex items-center justify-center text-white text-[10px] font-black"
-                        title={`${cat.label}: ${cat.count} siswa (${cat.pct}%)`}
-                      >
-                        {cat.pct >= 10 && `${cat.pct}%`}
-                      </div>
-                    );
-                  })}
+              {/* Bar Chart Canvas / Render */}
+              {currentDisplay.total === 0 ? (
+                <div className="py-16 px-4 flex flex-col items-center justify-center text-center gap-3 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  <AlertCircle className="w-8 h-8 text-slate-400" />
+                  <p className="text-sm font-bold text-slate-700">
+                    {currentDisplay.gradeLabel} — Belum Ada Data Pemeriksaan
+                  </p>
+                  <p className="text-xs text-slate-500 max-w-sm">
+                    Belum terdapat catatan hasil pemeriksaan antropometri untuk tingkat kelas ini di basis data <code>05_EXAMINATIONS</code>.
+                  </p>
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-col gap-6">
+                  {/* Visual Bar Chart Grid */}
+                  <div className="w-full pt-6 pb-2 px-2 sm:px-4 bg-slate-50/70 rounded-2xl border border-slate-100 flex flex-col gap-4">
+                    {/* Bars Grid */}
+                    <div className="grid grid-cols-5 gap-2 sm:gap-4 items-end min-h-[220px] sm:min-h-[260px] pb-3 border-b border-slate-200">
+                      {CATEGORY_KEYS.map(cat => {
+                        const count = currentDisplay[cat.key];
+                        const pct = currentDisplay.percentages[cat.key];
+                        // Calculate bar height percentage relative to ceiling maxCategoryCount
+                        const heightPct = maxCategoryCount > 0 ? Math.max((count / maxCategoryCount) * 100, 6) : 6;
 
-              {/* Grouped Horizontal Breakdown Bars */}
-              <div className="flex flex-col gap-4 mt-2">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Rincian Kategori Standar WHO
-                </span>
+                        return (
+                          <div key={cat.key} className="flex flex-col items-center gap-2 h-full justify-end group">
+                            {/* Value badge atop bar */}
+                            <div className="flex flex-col items-center transition-transform group-hover:-translate-y-1">
+                              <span className="text-[11px] sm:text-xs font-black text-slate-900">
+                                {count}
+                              </span>
+                              <span className="text-[9px] sm:text-[10px] font-semibold text-slate-500">
+                                {pct}%
+                              </span>
+                            </div>
 
-                <div className="flex flex-col gap-3.5">
-                  {categories.map(cat => (
-                    <div key={cat.key} className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
+                            {/* The Bar Cylinder */}
+                            <div className="w-full max-w-[48px] sm:max-w-[56px] h-full flex items-end">
+                              <div
+                                style={{
+                                  height: count > 0 ? `${heightPct}%` : '4px',
+                                  backgroundColor: count > 0 ? cat.style.color : '#cbd5e1',
+                                }}
+                                className="w-full rounded-t-xl transition-all duration-700 shadow-xs group-hover:brightness-110 relative"
+                                title={`${cat.label}: ${count} siswa (${pct}%)`}
+                              >
+                                {count > 0 && (
+                                  <div className="absolute inset-0 bg-white/10 rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Category Labels (X-Axis) */}
+                    <div className="grid grid-cols-5 gap-2 sm:gap-4 text-center">
+                      {CATEGORY_KEYS.map(cat => (
+                        <div key={cat.key} className="flex flex-col items-center gap-1">
                           <span
-                            className="w-3 h-3 rounded-full shrink-0"
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
                             style={{ backgroundColor: cat.style.color }}
                           />
-                          <span className="font-bold text-slate-800">{cat.label}</span>
-                          <span className="text-slate-400">({cat.style.zScoreRange})</span>
+                          <span className="text-[10px] sm:text-xs font-bold text-slate-800 leading-tight">
+                            {cat.shortLabel}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-mono hidden sm:block">
+                            {cat.style.zScoreRange}
+                          </span>
                         </div>
-                        <span className="font-bold text-slate-900">
-                          {cat.count} siswa <span className="text-slate-500 font-normal">({cat.pct}%)</span>
-                        </span>
-                      </div>
-
-                      {/* Progress Track */}
-                      <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-700"
-                          style={{
-                            width: `${cat.pct}%`,
-                            backgroundColor: cat.style.color,
-                          }}
-                        />
-                      </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Horizontal Breakdown List */}
+                  <div className="flex flex-col gap-3 pt-2">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Detail Distribusi Kategori:
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {CATEGORY_KEYS.map(cat => {
+                        const count = currentDisplay[cat.key];
+                        const pct = currentDisplay.percentages[cat.key];
+
+                        return (
+                          <div
+                            key={cat.key}
+                            className="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between text-xs"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <span
+                                className="w-3 h-3 rounded-md shrink-0"
+                                style={{ backgroundColor: cat.style.color }}
+                              />
+                              <div>
+                                <p className="font-bold text-slate-900">{cat.label}</p>
+                                <p className="text-[10px] text-slate-400">{cat.style.zScoreRange}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-black text-slate-900">{count} siswa</p>
+                              <p className="text-[10px] font-semibold text-slate-500">{pct}%</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </Card>
 
-            {/* Side Overview & Insights */}
+            {/* Side Overview & Population Insights */}
             <div className="lg:col-span-4 flex flex-col gap-6">
-              <Card className="p-6 bg-gradient-to-b from-sky-50 to-white border-sky-100 flex flex-col gap-4">
-                <div className="flex items-center gap-2">
+              <Card className="p-6 bg-gradient-to-b from-sky-50/80 to-white border-sky-100 flex flex-col gap-4 shadow-xs">
+                <div className="flex items-center gap-2 border-b border-sky-100 pb-3">
                   <Users className="w-5 h-5 text-sky-600" />
                   <h3 className="text-base font-bold text-slate-900">
-                    Ringkasan Populasi
+                    Ringkasan Populasi ({currentDisplay.gradeLabel})
                   </h3>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-white rounded-xl border border-sky-100">
-                    <span className="text-[11px] text-slate-500 block">Status Normal</span>
-                    <span className="text-2xl font-black text-emerald-600">
+                  <div className="p-3.5 bg-white rounded-2xl border border-sky-100 shadow-2xs">
+                    <span className="text-[11px] font-semibold text-slate-500 block">Status Normal</span>
+                    <span className="text-2xl font-black text-emerald-600 mt-0.5 block">
                       {currentDisplay.percentages.normal}%
+                    </span>
+                    <span className="text-[10px] text-slate-400 mt-1 block">
+                      {currentDisplay.normal} dari {currentDisplay.total} siswa
                     </span>
                   </div>
 
-                  <div className="p-3 bg-white rounded-xl border border-sky-100">
-                    <span className="text-[11px] text-slate-500 block">Perlu Perhatian</span>
-                    <span className="text-2xl font-black text-rose-600">
-                      {(Math.round((currentDisplay.percentages.severelyThinness + currentDisplay.percentages.obese) * 10) / 10).toFixed(1)}%
+                  <div className="p-3.5 bg-white rounded-2xl border border-sky-100 shadow-2xs">
+                    <span className="text-[11px] font-semibold text-slate-500 block">Perlu Perhatian</span>
+                    <span className="text-2xl font-black text-rose-600 mt-0.5 block">
+                      {attentionPercentage}%
+                    </span>
+                    <span className="text-[10px] text-slate-400 mt-1 block">
+                      {currentDisplay.severelyThinness + currentDisplay.obese} siswa (Gizi Sangat Kurang/Obesitas)
                     </span>
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Siswa dengan kategori <strong>Gizi Sangat Kurang</strong> atau <strong>Obesitas</strong> mendapatkan tindak lanjut pendampingan gizi oleh kader SATRIA dan rujukan ke Puskesmas/UKS.
+                <p className="text-xs text-slate-600 leading-relaxed bg-white/80 p-3 rounded-xl border border-sky-100/80">
+                  Siswa dalam kategori <strong>Gizi Sangat Kurang</strong> atau <strong>Obesitas</strong> menjadi prioritas pendampingan gizi oleh Kader SATRIA dan koordinasi bersama UKS/Puskesmas.
                 </p>
               </Card>
 
               {/* Standar WHO Info Card */}
-              <Card className="p-6 flex flex-col gap-3">
-                <div className="flex items-center gap-2 text-slate-800">
-                  <Info className="w-4 h-4 text-sky-600" />
+              <Card className="p-6 flex flex-col gap-3 bg-white border border-slate-200 shadow-xs">
+                <div className="flex items-center gap-2 text-slate-900 border-b border-slate-100 pb-3">
+                  <Info className="w-4 h-4 text-sky-600 shrink-0" />
                   <h4 className="text-xs font-bold uppercase tracking-wider">
                     Standar WHO Remaja
                   </h4>
                 </div>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Klasifikasi status gizi usia 5–19 tahun menggunakan <strong>Standar WHO</strong> dengan satuan Standar Deviasi (SD / Z-score) yang disesuaikan dengan jenis kelamin dan usia detail per bulan.
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Klasifikasi status gizi remaja (5–19 tahun) dihitung menggunakan Standar WHO dengan satuan Standar Deviasi (SD / Z-Score) berdasarkan usia detail dan jenis kelamin.
                 </p>
+                <div className="text-[11px] text-slate-500 space-y-1 pt-1 border-t border-slate-100">
+                  <div className="flex justify-between">
+                    <span>Gizi Normal:</span>
+                    <span className="font-semibold text-emerald-700">-2 SD s.d. +1 SD</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Gizi Kurang:</span>
+                    <span className="font-semibold text-sky-700">-3 SD s.d. &lt; -2 SD</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Gizi Sangat Kurang:</span>
+                    <span className="font-semibold text-purple-700">&lt; -3 SD</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Gizi Lebih:</span>
+                    <span className="font-semibold text-amber-700">&gt; +1 SD s.d. +2 SD</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Obesitas:</span>
+                    <span className="font-semibold text-rose-700">&gt; +2 SD</span>
+                  </div>
+                </div>
               </Card>
             </div>
           </div>
 
-          {/* 5. DATA TABLE AGREGAT PER TINGKAT KELAS */}
+          {/* 5. DATA TABLE AGREGAT PER TINGKAT KELAS (STANDAR WHO) */}
           <section className="flex flex-col gap-4 mt-2">
-            <div className="flex items-center gap-2">
-              <Layers className="w-5 h-5 text-sky-600" />
-              <h3 className="text-lg font-bold text-slate-900">
-                Tabel Perbandingan Status Gizi Antar Tingkat Kelas (Standar WHO)
-              </h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-slate-100 text-slate-700">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Tabel Perbandingan Status Gizi Antar Tingkat Kelas (Standar WHO)
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Agregasi lengkap perbandingan tingkat Kelas 10, 11, dan 12
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-2xs">
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs">
               <table className="w-full text-left text-xs sm:text-sm text-slate-700 border-collapse">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[11px]">
                   <tr>
-                    <th className="px-4 py-3.5 sm:px-6">Tingkat Kelas</th>
-                    <th className="px-4 py-3.5 sm:px-6">Total Diperiksa</th>
-                    <th className="px-4 py-3.5 sm:px-6 text-purple-700">Sgt Kurang (&lt;-3SD)</th>
-                    <th className="px-4 py-3.5 sm:px-6 text-sky-700">Kurang (-3 s.d -2SD)</th>
-                    <th className="px-4 py-3.5 sm:px-6 text-emerald-700">Normal (-2 s.d +1SD)</th>
-                    <th className="px-4 py-3.5 sm:px-6 text-amber-700">Lebih (&gt;+1 s.d +2SD)</th>
-                    <th className="px-4 py-3.5 sm:px-6 text-rose-700">Obesitas (&gt;+2SD)</th>
+                    <th className="py-3.5 px-4">Tingkat Kelas</th>
+                    <th className="py-3.5 px-4 text-center">Total Siswa</th>
+                    <th className="py-3.5 px-4 text-center text-purple-700">Sangat Kurang</th>
+                    <th className="py-3.5 px-4 text-center text-sky-700">Kurus</th>
+                    <th className="py-3.5 px-4 text-center text-emerald-700">Normal</th>
+                    <th className="py-3.5 px-4 text-center text-amber-700">Gizi Lebih</th>
+                    <th className="py-3.5 px-4 text-center text-rose-700">Obesitas</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {availableGrades.map(gr => {
-                    const row = gradeAggregates[gr];
-                    if (!row) return null;
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {availableGrades.map(grade => {
+                    const data = gradeAggregates[grade] || {
+                      total: 0,
+                      severelyThinness: 0,
+                      thinness: 0,
+                      normal: 0,
+                      overweight: 0,
+                      obese: 0,
+                    };
+
                     return (
-                      <tr key={gr} className="hover:bg-slate-50/80">
-                        <td className="px-4 py-3 sm:px-6 font-bold text-slate-900">
-                          Kelas {gr}
+                      <tr key={grade} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-slate-900">
+                          Kelas {grade}
                         </td>
-                        <td className="px-4 py-3 sm:px-6 font-semibold">{row.total} siswa</td>
-                        <td className="px-4 py-3 sm:px-6">{row.severelyThinness} ({row.percentages.severelyThinness}%)</td>
-                        <td className="px-4 py-3 sm:px-6">{row.thinness} ({row.percentages.thinness}%)</td>
-                        <td className="px-4 py-3 sm:px-6 font-bold text-emerald-600">{row.normal} ({row.percentages.normal}%)</td>
-                        <td className="px-4 py-3 sm:px-6">{row.overweight} ({row.percentages.overweight}%)</td>
-                        <td className="px-4 py-3 sm:px-6">{row.obese} ({row.percentages.obese}%)</td>
+                        <td className="py-3.5 px-4 text-center font-bold">
+                          {data.total > 0 ? (
+                            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-800">
+                              {data.total} siswa
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">0 terdata</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          {data.severelyThinness > 0 ? (
+                            <span className="text-purple-700 font-bold">{data.severelyThinness}</span>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          {data.thinness > 0 ? (
+                            <span className="text-sky-700 font-bold">{data.thinness}</span>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          {data.normal > 0 ? (
+                            <span className="text-emerald-700 font-bold">{data.normal}</span>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          {data.overweight > 0 ? (
+                            <span className="text-amber-700 font-bold">{data.overweight}</span>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          {data.obese > 0 ? (
+                            <span className="text-rose-700 font-bold">{data.obese}</span>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
-                  {/* Overall Footer Row */}
-                  <tr className="bg-slate-50 font-black text-slate-900 border-t-2 border-slate-200">
-                    <td className="px-4 py-3 sm:px-6">TOTAL SEMUA KELAS</td>
-                    <td className="px-4 py-3 sm:px-6">{overallAggregate.total} siswa</td>
-                    <td className="px-4 py-3 sm:px-6">{overallAggregate.severelyThinness} ({overallAggregate.percentages.severelyThinness}%)</td>
-                    <td className="px-4 py-3 sm:px-6">{overallAggregate.thinness} ({overallAggregate.percentages.thinness}%)</td>
-                    <td className="px-4 py-3 sm:px-6 text-emerald-600">{overallAggregate.normal} ({overallAggregate.percentages.normal}%)</td>
-                    <td className="px-4 py-3 sm:px-6">{overallAggregate.overweight} ({overallAggregate.percentages.overweight}%)</td>
-                    <td className="px-4 py-3 sm:px-6">{overallAggregate.obese} ({overallAggregate.percentages.obese}%)</td>
-                  </tr>
                 </tbody>
+                <tfoot className="bg-slate-100/90 font-black border-t-2 border-slate-200 text-slate-900 text-xs sm:text-sm">
+                  <tr>
+                    <td className="py-3.5 px-4 uppercase">Total Seluruh Siswa</td>
+                    <td className="py-3.5 px-4 text-center text-sky-800">
+                      {overallAggregate.total} siswa
+                    </td>
+                    <td className="py-3.5 px-4 text-center text-purple-800">{overallAggregate.severelyThinness}</td>
+                    <td className="py-3.5 px-4 text-center text-sky-800">{overallAggregate.thinness}</td>
+                    <td className="py-3.5 px-4 text-center text-emerald-800">{overallAggregate.normal}</td>
+                    <td className="py-3.5 px-4 text-center text-amber-800">{overallAggregate.overweight}</td>
+                    <td className="py-3.5 px-4 text-center text-rose-800">{overallAggregate.obese}</td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </section>
 
-          {/* 6. MODUL KEPATUHAN KONSUMSI TABLET TAMBAH DARAH (TTD) — AGREGASI PUBLIK */}
-          <section className="flex flex-col gap-6 pt-4 border-t border-slate-200">
-            <div className="flex flex-col gap-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold uppercase tracking-wider w-fit">
-                <Pill className="w-3.5 h-3.5" />
-                <span>Kepatuhan Konsumsi Tablet Tambah Darah</span>
-              </div>
-              <h2 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight font-display">
-                Anjuran Minum Tablet Tambah Darah & Distribusi Agregat per Kelas
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-sans">
-                Data agregat kepatuhan konsumsi Tablet Tambah Darah (TTD) mingguan bagi remaja putri berdasarkan laporan pencatatan kelas. Data disajikan secara teragregasi per rombongan belajar tanpa membuka identitas siswa.
-              </p>
-            </div>
-
-            {/* Quick Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card className="p-5 flex items-center gap-4 bg-gradient-to-br from-rose-50/60 to-white border-rose-100">
-                <div className="w-12 h-12 rounded-2xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+          {/* 6. KEPATUHAN TABLET TAMBAH DARAH (TTD) SECTION */}
+          <section className="flex flex-col gap-6 mt-4 pt-8 border-t border-slate-200">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-rose-50 text-rose-600 border border-rose-100">
                   <Pill className="w-6 h-6" />
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Diminum</span>
-                  <span className="text-2xl font-black text-slate-900">{totalTTDConsumed} Konsumsi</span>
-                  <span className="text-[11px] text-slate-400">Catatan kepatuhan TTD</span>
+                <div>
+                  <h3 className="text-xl font-extrabold text-slate-900 tracking-tight font-display">
+                    Kepatuhan Konsumsi Tablet Tambah Darah (TTD)
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                    Data agregat kepatuhan minum TTD mingguan bagi remaja putri per rombongan belajar.
+                  </p>
+                </div>
+              </div>
+
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Total {totalTTDConsumed} Konsumsi Tercatat</span>
+              </div>
+            </div>
+
+            {/* TTD Metrics Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Card className="p-5 border-slate-200 bg-white flex items-center gap-4 shadow-2xs">
+                <div className="p-3 bg-rose-50 text-rose-600 rounded-2xl">
+                  <Pill className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Diminum</p>
+                  <p className="text-2xl font-black text-slate-900 mt-0.5">{totalTTDConsumed} Konsumsi</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Catatan kepatuhan TTD</p>
                 </div>
               </Card>
 
-              <Card className="p-5 flex items-center gap-4 bg-gradient-to-br from-sky-50/60 to-white border-sky-100">
-                <div className="w-12 h-12 rounded-2xl bg-sky-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <Card className="p-5 border-slate-200 bg-white flex items-center gap-4 shadow-2xs">
+                <div className="p-3 bg-sky-50 text-sky-600 rounded-2xl">
                   <Layers className="w-6 h-6" />
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Jumlah Kelas</span>
-                  <span className="text-2xl font-black text-slate-900">{totalClassesCount} Kelas</span>
-                  <span className="text-[11px] text-slate-400">Terdaftar di database</span>
+                <div>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Jumlah Kelas</p>
+                  <p className="text-2xl font-black text-slate-900 mt-0.5">{totalClassesCount} Kelas</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Terdaftar di database</p>
                 </div>
               </Card>
 
-              <Card className="p-5 flex items-center gap-4 bg-gradient-to-br from-emerald-50/60 to-white border-emerald-100">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <Card className="p-5 border-slate-200 bg-white flex items-center gap-4 shadow-2xs">
+                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Status Pemantauan</span>
-                  <span className="text-2xl font-black text-emerald-600">Aktif</span>
-                  <span className="text-[11px] text-slate-400">Dipantau berkala</span>
+                <div>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Status Pemantauan</p>
+                  <p className="text-2xl font-black text-emerald-700 mt-0.5">Aktif</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Dipantau berkala</p>
                 </div>
               </Card>
             </div>
 
-            {/* Distribution Grid Cards per Class */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {classTTDAggregates.map(cls => (
-                <Card key={cls.classId} className="p-5 flex flex-col gap-3 border-slate-200/80 hover:border-rose-300 transition-all">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 text-sm">{cls.className}</span>
-                    <Badge variant={cls.consumedCount > 0 ? 'success' : 'neutral'} size="sm">
-                      {cls.consumedCount > 0 ? 'Tercatat' : 'Belum Ada Data'}
-                    </Badge>
-                  </div>
-                  <div className="flex items-baseline justify-between border-t border-slate-100 pt-2 text-xs">
-                    <span className="text-slate-500">Jumlah Siswa Minum:</span>
-                    <span className="font-extrabold text-slate-900 text-sm">
-                      {cls.consumedCount} siswa sudah minum
-                    </span>
-                  </div>
-                </Card>
-              ))}
-            </div>
-
-            {/* Aggregate Table per Class */}
-            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-2xs">
+            {/* Class-level Aggregate TTD Table */}
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs">
               <table className="w-full text-left text-xs sm:text-sm text-slate-700 border-collapse">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[11px]">
                   <tr>
-                    <th className="px-4 py-3.5 sm:px-6">Kelas</th>
-                    <th className="px-4 py-3.5 sm:px-6">Tingkat</th>
-                    <th className="px-4 py-3.5 sm:px-6 text-rose-700">Jumlah Siswa Sudah Minum TTD</th>
-                    <th className="px-4 py-3.5 sm:px-6">Status Kepatuhan</th>
+                    <th className="py-3.5 px-4">Kelas</th>
+                    <th className="py-3.5 px-4">Tingkat</th>
+                    <th className="py-3.5 px-4 text-center">Jumlah Siswa Sudah Minum TTD</th>
+                    <th className="py-3.5 px-4 text-center">Status Kepatuhan</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {classTTDAggregates.map(cls => (
-                    <tr key={cls.classId} className="hover:bg-slate-50/80">
-                      <td className="px-4 py-3 sm:px-6 font-bold text-slate-900">{cls.className}</td>
-                      <td className="px-4 py-3 sm:px-6">Kelas {cls.grade}</td>
-                      <td className="px-4 py-3 sm:px-6 font-extrabold text-rose-600">
-                        {cls.consumedCount} siswa sudah minum
-                      </td>
-                      <td className="px-4 py-3 sm:px-6">
-                        {cls.consumedCount > 0 ? (
-                          <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Terdata ({cls.consumedCount} dosis)
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">Belum ada input</span>
-                        )}
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {classTTDAggregates.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-8 text-center text-slate-400 italic">
+                        Belum ada data kelas atau pencatatan TTD di basis data.
                       </td>
                     </tr>
-                  ))}
-                  <tr className="bg-slate-50 font-black text-slate-900 border-t-2 border-slate-200">
-                    <td className="px-4 py-3 sm:px-6" colSpan={2}>TOTAL KONSUMSI TTD SELURUH KELAS</td>
-                    <td className="px-4 py-3 sm:px-6 text-rose-600 font-black">{totalTTDConsumed} siswa sudah minum</td>
-                    <td className="px-4 py-3 sm:px-6 text-slate-700 font-bold">{totalClassesCount} Kelas Terdata</td>
-                  </tr>
+                  ) : (
+                    classTTDAggregates.map(cls => (
+                      <tr key={cls.classId} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-slate-900">
+                          {cls.className}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-600">
+                          Kelas {cls.grade}
+                        </td>
+                        <td className="py-3.5 px-4 text-center font-bold text-slate-900">
+                          {cls.consumedCount > 0 ? (
+                            <span className="text-rose-700 font-extrabold">
+                              {cls.consumedCount} siswa sudah minum
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 font-normal">0 siswa</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          {cls.consumedCount > 0 ? (
+                            <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full text-xs font-semibold">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Terdata ({cls.consumedCount} dosis)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full text-xs font-medium">
+                              Belum ada entri
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
+                <tfoot className="bg-slate-100/90 font-black border-t-2 border-slate-200 text-slate-900 text-xs sm:text-sm">
+                  <tr>
+                    <td colSpan={2} className="py-3.5 px-4 uppercase">
+                      Total Konsumsi TTD Seluruh Kelas
+                    </td>
+                    <td className="py-3.5 px-4 text-center text-rose-800">
+                      {totalTTDConsumed} siswa sudah minum
+                    </td>
+                    <td className="py-3.5 px-4 text-center text-slate-700">
+                      {totalClassesCount} Kelas Terdata
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </section>

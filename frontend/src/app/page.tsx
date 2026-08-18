@@ -25,9 +25,9 @@ import {
   ShieldCheck,
   Award,
   Sparkles,
-  BarChart3,
   ChevronRight,
   CheckCircle2,
+  LogIn,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -127,14 +127,14 @@ export default function HomePage() {
 
             {/* Action CTAs */}
             <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mt-2 w-full sm:w-auto">
-              <Link href="/grafik" className="w-full sm:w-auto">
+              <Link href="/login" className="w-full sm:w-auto">
                 <Button
                   size="lg"
                   variant="primary"
                   className="w-full sm:w-auto text-sm sm:text-base font-bold shadow-lg shadow-sky-500/25"
-                  rightIcon={<BarChart3 className="w-4 h-4" />}
+                  rightIcon={<LogIn className="w-4 h-4" />}
                 >
-                  Lihat Grafik Status Gizi
+                  Masuk Portal SANTARA
                 </Button>
               </Link>
 

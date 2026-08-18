@@ -46,8 +46,8 @@ export function getRoleLabel(role: AppRole | string): string {
  *
  * /                → PUBLIC
  * /edukasi         → PUBLIC
- * /grafik          → PUBLIC
  * /login           → PUBLIC
+ * /grafik          → KEPALA_SEKOLAH + KADER (Protected)
  * /kader/*         → KEPALA_SEKOLAH + KADER (Kader SATRIA)
  * /admin/*         → KEPALA_SEKOLAH (Kelola Kader & Pengguna)
  * /siswa/*         → SISWA only

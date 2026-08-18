@@ -190,42 +190,19 @@ function LoginContent() {
 
               <Input
                 label="ID Pengguna"
-                placeholder="Contoh: USR001 (Kepala Sekolah), USR003 (Kader)"
+                placeholder="Masukkan ID Pengguna Anda"
                 value={loginId}
                 onChange={e => setLoginId(e.target.value)}
                 disabled={submitting}
                 leftIcon={<UserIcon className="w-4 h-4 text-slate-400" />}
-                helperText="Akses resmi untuk Kepala Sekolah dan Kader SATRIA."
+                helperText="Akses masuk resmi untuk Kader SATRIA dan Kepala Sekolah."
               />
-
-              {/* Quick Login Chips for Demo / Testing */}
-              <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Akses Cepat Pengguna:
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setLoginId('USR001')}
-                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-rose-400 text-slate-800 font-bold text-[11px] transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
-                  >
-                    <span>🏫 USR001 (Kepala Sekolah)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLoginId('USR003')}
-                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-sky-400 text-slate-800 font-bold text-[11px] transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
-                  >
-                    <span>🩺 USR003 (Kader SATRIA)</span>
-                  </button>
-                </div>
-              </div>
 
               <Button
                 type="submit"
                 variant="primary"
                 isLoading={submitting}
-                className="w-full font-bold min-h-[44px] mt-1"
+                className="w-full font-bold min-h-[44px] mt-2"
                 leftIcon={<LogIn className="w-4 h-4" />}
               >
                 Masuk ke Portal SANTARA
