@@ -4,6 +4,7 @@ import { HeartPulse } from 'lucide-react';
 
 export function Footer() {
   const partnerLogos = [
+    { name: 'Direktorat Riset, Teknologi, dan Pengabdian kepada Masyarakat (DRTPM / Dikti Sains)', src: '/Logo/LogoDiktiSains.png' },
     { name: 'BIMA Kemendikbudristek', src: '/Logo/LogoBima.jpeg' },
     { name: 'Universitas Negeri Malang', src: '/Logo/LogoUM.jpeg' },
     { name: 'FIK Universitas Negeri Malang', src: '/Logo/LogoFIK.jpeg' },

@@ -249,16 +249,21 @@ export default function SiswaDashboardPage() {
 
           {/* 4. DIGITAL JAKRA (JEJAK KESEHATAN REMAJA) PERIODIC TABLE */}
           <section className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <HeartPulse className="w-5 h-5 text-rose-600" />
                 <h3 className="text-base sm:text-lg font-bold text-slate-900">
                   Kartu Pemantauan Kesehatan JAKRA (Jejak Kesehatan Remaja)
                 </h3>
               </div>
-              <span className="text-xs text-slate-500">
-                Representasi digital kartu rekam berkala (12 Kolom)
-              </span>
+              <a
+                href="https://drive.google.com/file/d/18pUXE47Lp1gzSQRWU18PK67D1sIOI4wE/view?usp=sharing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200"
+              >
+                <span>Buka Format Cetak JAKRA (Google Drive) &rarr;</span>
+              </a>
             </div>
 
             <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-2xs">

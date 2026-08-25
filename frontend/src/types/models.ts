@@ -143,8 +143,24 @@ export interface EducationArticle {
   excerpt: string;
   content: string;
   thumbnail_url: string;
+  image_url?: string;
   status: EducationStatus;
   created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * 10_PIC_ARTIC Schema (Article Images Metadata)
+ */
+export interface ArticleImage {
+  id: string;
+  article_id: string;
+  file_id: string;
+  image_url: string;
+  filename: string;
+  mime_type: string;
+  status: string;
   created_at: string;
   updated_at: string;
 }

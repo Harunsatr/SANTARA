@@ -83,7 +83,8 @@ function LoginContent() {
     try {
       // Cari di users (01_USERS) - KEPALA SEKOLAH / KADER SATRIA
       const userMatch = users.find(
-        u => u.id.toLowerCase() === id.toLowerCase() || (u.email && u.email.toLowerCase() === id.toLowerCase())
+        u => (u.id && u.id.trim().toLowerCase() === id.toLowerCase()) ||
+             (u.email && u.email.trim().toLowerCase() === id.toLowerCase())
       );
 
       if (userMatch) {
@@ -97,7 +98,7 @@ function LoginContent() {
         return;
       }
 
-      setLoginError('ID Pengguna tidak ditemukan dalam basis data 01_USERS');
+      setLoginError('ID Pengguna atau Email tidak ditemukan dalam basis data 01_USERS');
     } catch (err: unknown) {
       setLoginError(err instanceof Error ? err.message : 'Terjadi kesalahan sistem');
     } finally {
@@ -189,13 +190,13 @@ function LoginContent() {
               )}
 
               <Input
-                label="ID Pengguna"
-                placeholder="Masukkan ID Pengguna Anda"
+                label="ID Pengguna atau Email"
+                placeholder="Masukkan ID Pengguna (USR001) atau Email Anda"
                 value={loginId}
                 onChange={e => setLoginId(e.target.value)}
                 disabled={submitting}
                 leftIcon={<UserIcon className="w-4 h-4 text-slate-400" />}
-                helperText="Akses masuk resmi untuk Kader SATRIA dan Kepala Sekolah."
+                helperText="Akses masuk resmi untuk Kader SATRIA (kadersatria.smaba@gmail.com) dan Kepala Sekolah."
               />
 
               <Button

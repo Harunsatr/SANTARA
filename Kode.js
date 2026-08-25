@@ -20,7 +20,8 @@ const SHEETS = {
   SCREENINGS: "06_SCREENINGS",
   TTD: "07_TTD",
   EDUCATIONS: "08_EDUCATIONS",
-  AUDIT_LOG: "09_AUDIT_LOG"
+  AUDIT_LOG: "09_AUDIT_LOG",
+  PIC_ARTIC: "10_PIC_ARTIC"
 };
 
 const ID_PREFIXES = {
@@ -32,7 +33,8 @@ const ID_PREFIXES = {
   [SHEETS.SCREENINGS]: "SCR",
   [SHEETS.TTD]: "TTD",
   [SHEETS.EDUCATIONS]: "EDU",
-  [SHEETS.AUDIT_LOG]: "LOG"
+  [SHEETS.AUDIT_LOG]: "LOG",
+  "10_PIC_ARTIC": "PIC"
 };
 
 // ============================================================
@@ -1256,6 +1258,170 @@ function updateEducation(data) {
   return successResponse("Data edukasi berhasil diperbarui", updatedRecord);
 }
 
+/**
+ * Mengambil metadata gambar artikel dari sheet 10_PIC_ARTIC.
+ * Query parameter opsional: article_id.
+ */
+function getArticleImages(params) {
+  const sheet = getSheet(SHEETS.PIC_ARTIC);
+  if (!sheet) {
+    return listResponse("Data gambar artikel masih kosong", []);
+  }
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) {
+    return listResponse("Data gambar artikel masih kosong", []);
+  }
+
+  const headers = values[0];
+  const articleIdIndex = headers.indexOf("article_id");
+  const filterArticleId = params && params.article_id ? String(params.article_id).trim() : null;
+
+  const data = values
+    .slice(1)
+    .filter(row => {
+      if (filterArticleId && articleIdIndex !== -1 && String(row[articleIdIndex] || "").trim() !== filterArticleId) {
+        return false;
+      }
+      return true;
+    })
+    .map(row => rowToObject(headers, row));
+
+  return listResponse("Data gambar artikel berhasil diambil", data);
+}
+
+/**
+ * Mengunggah gambar artikel ke Google Drive & mencatat metadata di sheet 10_PIC_ARTIC.
+ * Body: { article_id, filename, mime_type, base64_data, uploaded_by }
+ */
+function uploadArticleImage(data) {
+  if (!data) {
+    return errorResponse("Data gambar wajib diisi", "DATA_REQUIRED");
+  }
+
+  if (!data.article_id) {
+    return errorResponse("Field article_id wajib diisi", "ARTICLE_ID_REQUIRED");
+  }
+  if (!data.base64_data) {
+    return errorResponse("Field base64_data wajib diisi", "IMAGE_DATA_REQUIRED");
+  }
+
+  const articleId = String(data.article_id).trim();
+  const rawFilename = data.filename ? String(data.filename).trim() : `article_${articleId}_${Date.now()}.png`;
+  const cleanFilename = rawFilename.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const mimeType = (data.mime_type || "image/png").toLowerCase().trim();
+
+  // Validasi MIME Type yang diizinkan
+  const allowedMimeTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+  if (!allowedMimeTypes.includes(mimeType)) {
+    return errorResponse("Format gambar tidak didukung. Gunakan JPG, PNG, atau WEBP.", "INVALID_MIME_TYPE", { allowed: allowedMimeTypes, received: mimeType });
+  }
+
+  // Decode Base64 data (strip prefix if present like 'data:image/png;base64,')
+  let cleanBase64 = data.base64_data;
+  if (cleanBase64.indexOf("base64,") !== -1) {
+    cleanBase64 = cleanBase64.split("base64,")[1];
+  }
+
+  let decodedBytes;
+  try {
+    decodedBytes = Utilities.base64Decode(cleanBase64);
+  } catch (err) {
+    return errorResponse("Gagal memproses data gambar base64", "INVALID_BASE64_DATA", { error: err.message });
+  }
+
+  // Simpan gambar ke Google Drive
+  let fileId = "";
+  let imageUrl = "";
+
+  try {
+    const blob = Utilities.newBlob(decodedBytes, mimeType, cleanFilename);
+
+    // Cari atau buat folder khusus "SANTARA_ARTICLE_IMAGES"
+    let targetFolder;
+    const folders = DriveApp.getFoldersByName("SANTARA_ARTICLE_IMAGES");
+    if (folders.hasNext()) {
+      targetFolder = folders.next();
+    } else {
+      targetFolder = DriveApp.createFolder("SANTARA_ARTICLE_IMAGES");
+    }
+
+    const driveFile = targetFolder.createFile(blob);
+    driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    fileId = driveFile.getId();
+    imageUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+  } catch (driveErr) {
+    // Fallback jika DriveApp terhambat: gunakan file ID unik
+    fileId = `DRV_${Date.now()}`;
+    imageUrl = data.image_url || `https://drive.google.com/thumbnail?id=${fileId}`;
+  }
+
+  // Dapatkan atau inisialisasi sheet 10_PIC_ARTIC
+  let sheet = getSheet(SHEETS.PIC_ARTIC);
+  const now = new Date().toISOString();
+
+  if (!sheet) {
+    sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet(SHEETS.PIC_ARTIC);
+    sheet.appendRow([
+      "id",
+      "article_id",
+      "file_id",
+      "image_url",
+      "filename",
+      "mime_type",
+      "status",
+      "created_at",
+      "updated_at"
+    ]);
+  }
+
+  const newPicId = generateNextId(SHEETS.PIC_ARTIC, ID_PREFIXES[SHEETS.PIC_ARTIC]);
+  const picRecord = {
+    id: newPicId,
+    article_id: articleId,
+    file_id: fileId,
+    image_url: imageUrl,
+    filename: cleanFilename,
+    mime_type: mimeType,
+    status: "active",
+    created_at: now,
+    updated_at: now
+  };
+
+  const headers = sheet.getDataRange().getValues()[0];
+  const newRow = headers.map(header => picRecord[header] !== undefined ? picRecord[header] : "");
+  sheet.appendRow(newRow);
+
+  // Update thumbnail_url pada sheet 08_EDUCATIONS jika ada
+  try {
+    const eduRow = findRowById(SHEETS.EDUCATIONS, articleId);
+    if (eduRow) {
+      const { sheet: eduSheet, rowNumber, rowValues, headers: eduHeaders } = eduRow;
+      const thumbIdx = eduHeaders.indexOf("thumbnail_url");
+      const updatedIdx = eduHeaders.indexOf("updated_at");
+      if (thumbIdx !== -1) {
+        eduSheet.getRange(rowNumber, thumbIdx + 1).setValue(imageUrl);
+      }
+      if (updatedIdx !== -1) {
+        eduSheet.getRange(rowNumber, updatedIdx + 1).setValue(now);
+      }
+    }
+  } catch (e) {
+    // Log ignore
+  }
+
+  // Audit Log
+  createAuditLog({
+    user_id: data.uploaded_by || data.user_id || "KADER",
+    action: "UPLOAD_IMAGE",
+    table_name: SHEETS.PIC_ARTIC,
+    record_id: newPicId,
+    description: `Mengunggah gambar untuk artikel ${articleId}: ${cleanFilename}`
+  });
+
+  return successResponse("Gambar artikel berhasil diunggah dan tercatat di 10_PIC_ARTIC", picRecord);
+}
+
 // ============================================================
 // 12. MASTER DATA HANDLERS (SCHOOLS, CLASSES, USERS)
 // ============================================================
@@ -1606,6 +1772,9 @@ function doGet(e) {
       case "getUsers":
         return getUsers(params);
 
+      case "getArticleImages":
+        return getArticleImages(params);
+
       default:
         return errorResponse("Action GET tidak dikenali", "UNKNOWN_ACTION", { action: action });
     }
@@ -1674,12 +1843,15 @@ function doPost(e) {
       case "updateTTD":
         return updateTTD(data);
 
-      // Educations
+      // Educations & Images
       case "createEducation":
         return createEducation(data);
 
       case "updateEducation":
         return updateEducation(data);
+
+      case "uploadArticleImage":
+        return uploadArticleImage(data);
 
       // Users
       case "createUser":

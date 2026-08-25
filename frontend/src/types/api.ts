@@ -210,6 +210,20 @@ export interface UpdateEducationPayload {
   user_id?: string;
 }
 
+// Article Images (10_PIC_ARTIC)
+export interface UploadArticleImagePayload {
+  article_id: string;
+  filename: string;
+  mime_type: string;
+  base64_data: string;
+  uploaded_by?: string;
+  user_id?: string;
+}
+
+export interface GetArticleImagesParams {
+  article_id?: string;
+}
+
 /**
  * Normalized API Client Result
  */

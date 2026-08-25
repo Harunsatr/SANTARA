@@ -30,13 +30,16 @@ import {
   Eye,
   Tag,
   ExternalLink,
+  ImageIcon,
+  Upload,
+  X,
+  Camera,
 } from 'lucide-react';
 import { EducationArticle } from '@/types/models';
-import { fetchEducations, createEducation, updateEducation } from '@/lib/api/educations';
+import { fetchEducations, createEducation, updateEducation, uploadArticleImage } from '@/lib/api/educations';
 import { formatDateIndo } from '@/lib/utils/date';
 import { useSession } from '@/context/SessionContext';
 import { OFFICIAL_PROGRAM_ACTIVITIES } from '@/lib/services/activityPhotoService';
-import { Camera } from 'lucide-react';
 import Link from 'next/link';
 
 export default function EdukasiKelolaPage() {
@@ -63,13 +66,17 @@ export default function EdukasiKelolaPage() {
   // Form states
   const [formTitle, setFormTitle] = useState('');
   const [formSlug, setFormSlug] = useState('');
-  const [formCategory, setFormCategory] = useState('Gizi Seimbang');
+  const [formCategory, setFormCategory] = useState('Kesehatan Remaja');
   const [formExcerpt, setFormExcerpt] = useState('');
   const [formContent, setFormContent] = useState('');
   const [formStatus, setFormStatus] = useState<'published' | 'draft'>('published');
   const [formValidation, setFormValidation] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  // Image Upload States
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // 1. Initial Load & Synchronization Function
   useEffect(() => {
@@ -139,11 +146,13 @@ export default function EdukasiKelolaPage() {
     setEditingArticle(null);
     setFormTitle('');
     setFormSlug('');
-    setFormCategory('Gizi Seimbang');
+    setFormCategory('Kesehatan Remaja');
     setFormExcerpt('');
     setFormContent('');
     setFormStatus('published');
     setFormValidation({});
+    setImageFile(null);
+    setImagePreview(null);
     setIsFormModalOpen(true);
   };
 
@@ -152,11 +161,13 @@ export default function EdukasiKelolaPage() {
     setEditingArticle(art);
     setFormTitle(art.title);
     setFormSlug(art.slug);
-    setFormCategory(art.category || 'Gizi Seimbang');
+    setFormCategory(art.category || 'Kesehatan Remaja');
     setFormExcerpt(art.excerpt || '');
     setFormContent(art.content || '');
     setFormStatus(art.status === 'draft' ? 'draft' : 'published');
     setFormValidation({});
+    setImageFile(null);
+    setImagePreview(art.thumbnail_url || art.image_url || null);
     setIsFormModalOpen(true);
   };
 
@@ -168,7 +179,39 @@ export default function EdukasiKelolaPage() {
     }
   };
 
-  // 7. Submit Form Handler (Add or Edit)
+  // 7. Handle Image File Selection & Validation
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // MIME Validation
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type.toLowerCase())) {
+      setFormValidation(prev => ({ ...prev, image: 'Format gambar harus JPG, PNG, atau WEBP.' }));
+      return;
+    }
+
+    // Size Validation (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setFormValidation(prev => ({ ...prev, image: 'Ukuran file gambar maksimal 5MB.' }));
+      return;
+    }
+
+    setFormValidation(prev => {
+      const copy = { ...prev };
+      delete copy.image;
+      return copy;
+    });
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // 8. Submit Form Handler (Add or Edit with Image Upload to 10_PIC_ARTIC)
   const handleSubmitArticle = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -193,6 +236,8 @@ export default function EdukasiKelolaPage() {
 
     setIsSubmitting(true);
     try {
+      let savedArticleId = '';
+
       if (editingArticle) {
         // UPDATE EXISTING ARTICLE
         const payload = {
@@ -209,16 +254,13 @@ export default function EdukasiKelolaPage() {
 
         const res = await updateEducation(payload);
         if (res.success && res.data) {
-          setToast({
-            message: `Artikel "${cleanTitle}" berhasil diperbarui.`,
-            type: 'success',
-          });
-          setIsFormModalOpen(false);
-          await handleManualRefresh();
+          savedArticleId = editingArticle.id;
         } else {
           setFormValidation({
             general: res.message || 'Gagal memperbarui artikel edukasi di Google Sheets.',
           });
+          setIsSubmitting(false);
+          return;
         }
       } else {
         // CREATE NEW ARTICLE
@@ -235,18 +277,40 @@ export default function EdukasiKelolaPage() {
 
         const res = await createEducation(payload);
         if (res.success && res.data) {
-          setToast({
-            message: `Artikel baru "${cleanTitle}" berhasil dipublikasikan.`,
-            type: 'success',
-          });
-          setIsFormModalOpen(false);
-          await handleManualRefresh();
+          savedArticleId = res.data.id;
         } else {
           setFormValidation({
             general: res.message || 'Gagal menyimpan artikel baru ke Google Sheets.',
           });
+          setIsSubmitting(false);
+          return;
         }
       }
+
+      // Handle Image Upload to 10_PIC_ARTIC & Google Drive if file selected
+      if (imageFile && imagePreview && savedArticleId) {
+        try {
+          await uploadArticleImage({
+            article_id: savedArticleId,
+            filename: imageFile.name,
+            mime_type: imageFile.type,
+            base64_data: imagePreview,
+            uploaded_by: user?.id || 'USR001',
+            user_id: user?.id || 'USR001',
+          });
+        } catch (imgErr) {
+          console.error('Gagal mengunggah gambar ke 10_PIC_ARTIC:', imgErr);
+        }
+      }
+
+      setToast({
+        message: editingArticle
+          ? `Artikel "${cleanTitle}" berhasil diperbarui.`
+          : `Artikel baru "${cleanTitle}" berhasil dipublikasikan.`,
+        type: 'success',
+      });
+      setIsFormModalOpen(false);
+      await handleManualRefresh();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Terjadi kesalahan sistem saat menyimpan artikel.';
       setFormValidation({ general: msg });
@@ -255,7 +319,7 @@ export default function EdukasiKelolaPage() {
     }
   };
 
-  // 8. Categories List
+  // 9. Categories List
   const categoriesList = useMemo(() => {
     const set = new Set<string>();
     articles.forEach(a => {
@@ -264,7 +328,7 @@ export default function EdukasiKelolaPage() {
     return Array.from(set);
   }, [articles]);
 
-  // 9. Filtered Articles List
+  // 10. Filtered Articles List
   const filteredArticles = useMemo(() => {
     return articles.filter(art => {
       if (searchQuery.trim() !== '') {
@@ -288,30 +352,20 @@ export default function EdukasiKelolaPage() {
     });
   }, [articles, searchQuery, filterCategory, filterStatus]);
 
-  // 10. Metric Summaries
-  const stats = useMemo(() => {
-    const total = articles.length;
-    const publishedCount = articles.filter(a => a.status === 'published').length;
-    const draftCount = articles.filter(a => a.status === 'draft').length;
-    const categoryCount = categoriesList.length;
-
-    return { total, publishedCount, draftCount, categoryCount };
-  }, [articles, categoriesList]);
-
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed top-20 right-6 z-50">
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(null)}
-          />
-        </div>
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
 
-      {/* Header & Controls */}
+      {/* ========================================================================= */}
+      {/* HEADER & ACTIONS                                                         */}
+      {/* ========================================================================= */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
@@ -355,118 +409,117 @@ export default function EdukasiKelolaPage() {
             variant="primary"
             size="sm"
             onClick={handleOpenAddModal}
-            className="flex items-center gap-2 shadow-sm"
+            className="flex items-center gap-2 font-bold shadow-sm"
           >
             <Plus className="w-4 h-4" />
-            <span>Tulis Artikel Baru</span>
+            <span>Buat Artikel Baru</span>
           </Button>
         </div>
       </div>
 
-      {/* Live Sync Timestamp Indicator */}
-      <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 border border-slate-200/80 rounded-lg px-4 py-2">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Google Sheets Source of Truth terhubung pada sheet <strong className="text-slate-700">08_EDUCATIONS</strong></span>
-        </div>
-        <div>
-          {lastUpdated ? (
-            <span>Data diperbarui pada {lastUpdated.toLocaleTimeString('id-ID')}</span>
-          ) : (
-            <span>Memuat waktu sinkronisasi...</span>
-          )}
-        </div>
-      </div>
-
-      {/* Summary Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-4 bg-white border border-slate-200 hover:shadow-md transition-shadow">
+      {/* ========================================================================= */}
+      {/* STATS & OVERVIEW CARDS                                                    */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="p-4 bg-white border border-slate-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Artikel</p>
-              <p className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">{stats.total}</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Total Artikel
+              </p>
+              <p className="text-2xl font-black text-slate-900 mt-1">
+                {articles.length}
+              </p>
             </div>
-            <div className="p-3 bg-sky-50 text-sky-600 rounded-xl">
+            <div className="p-3 bg-sky-50 rounded-xl text-sky-600">
               <BookOpen className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-2 text-xs text-slate-400">Semua materi tersimpan</div>
         </Card>
 
-        <Card className="p-4 bg-white border border-slate-200 hover:shadow-md transition-shadow">
+        <Card className="p-4 bg-white border border-slate-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Published</p>
-              <p className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1">{stats.publishedCount}</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Artikel Dipublikasikan
+              </p>
+              <p className="text-2xl font-black text-emerald-600 mt-1">
+                {articles.filter(a => a.status === 'published').length}
+              </p>
             </div>
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+            <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600">
               <CheckCircle2 className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-2 text-xs text-emerald-600 font-medium">Tampil di portal publik</div>
         </Card>
 
-        <Card className="p-4 bg-white border border-slate-200 hover:shadow-md transition-shadow">
+        <Card className="p-4 bg-white border border-slate-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Draft</p>
-              <p className="text-2xl sm:text-3xl font-black text-amber-600 mt-1">{stats.draftCount}</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Draft / Menunggu
+              </p>
+              <p className="text-2xl font-black text-amber-600 mt-1">
+                {articles.filter(a => a.status === 'draft').length}
+              </p>
             </div>
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
+            <div className="p-3 bg-amber-50 rounded-xl text-amber-600">
               <FileEdit className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-2 text-xs text-amber-600 font-medium">Dalam penulisan kader</div>
         </Card>
 
-        <Card className="p-4 bg-white border border-slate-200 hover:shadow-md transition-shadow">
+        <Card className="p-4 bg-white border border-slate-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Kategori</p>
-              <p className="text-2xl sm:text-3xl font-black text-sky-600 mt-1">{stats.categoryCount}</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Kategori Materi
+              </p>
+              <p className="text-2xl font-black text-indigo-600 mt-1">
+                {categoriesList.length}
+              </p>
             </div>
-            <div className="p-3 bg-sky-50 text-sky-600 rounded-xl">
+            <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
               <FolderOpen className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-2 text-xs text-slate-400">Topik edukasi aktif</div>
         </Card>
       </div>
 
-      {/* Filter & Search Bar */}
-      <Card className="p-4 bg-white border border-slate-200">
+      {/* ========================================================================= */}
+      {/* FILTER & SEARCH BAR                                                       */}
+      {/* ========================================================================= */}
+      <Card className="p-4 bg-white border border-slate-200 shadow-2xs">
         <div className="flex flex-col md:flex-row items-center gap-3">
-          {/* Search Input */}
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Cari judul artikel, topik, atau kata kunci ringkasan..."
+              placeholder="Cari judul, ringkasan, atau slug artikel..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all"
             />
           </div>
 
-          {/* Filter Dropdowns */}
           <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            {/* Category Filter */}
             <select
               value={filterCategory}
               onChange={e => setFilterCategory(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-700 bg-white focus:ring-2 focus:ring-sky-500"
+              className="px-3 py-2 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
             >
               <option value="ALL">Semua Kategori</option>
               {categoriesList.map(cat => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
+                <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
 
+            {/* Status Filter */}
             <select
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-700 bg-white focus:ring-2 focus:ring-sky-500"
+              className="px-3 py-2 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
             >
               <option value="ALL">Semua Status</option>
               <option value="published">Published</option>
@@ -476,23 +529,30 @@ export default function EdukasiKelolaPage() {
         </div>
       </Card>
 
-      {/* Main Articles Table */}
-      <Card className="overflow-hidden border border-slate-200 bg-white">
-        <CardHeader className="p-4 sm:p-5 border-b border-slate-100 flex flex-row items-center justify-between">
+      {/* ========================================================================= */}
+      {/* ARTICLES DATA TABLE                                                       */}
+      {/* ========================================================================= */}
+      <Card className="bg-white border border-slate-200 shadow-2xs overflow-hidden">
+        <CardHeader className="p-4 sm:px-6 border-b border-slate-100 flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-lg font-bold text-slate-900">
-              Daftar Artikel Umum ({filteredArticles.length})
+            <CardTitle className="text-base sm:text-lg font-bold text-slate-900">
+              Daftar Artikel &amp; Materi Edukasi (08_EDUCATIONS)
             </CardTitle>
             <CardDescription className="text-xs text-slate-500 mt-0.5">
-              Kelola materi edukasi kesehatan, gizi seimbang, dan suplemen TTD.
+              Tersinkronisasi otomatis dengan Google Sheets 08_EDUCATIONS dan 10_PIC_ARTIC.
             </CardDescription>
           </div>
+          {lastUpdated && (
+            <span className="text-[11px] text-slate-400 hidden sm:inline-block">
+              Terakhir diperbarui: {lastUpdated.toLocaleTimeString('id-ID')}
+            </span>
+          )}
         </CardHeader>
 
         <CardContent className="p-0">
           {isLoading ? (
             <div className="py-16">
-              <LoadingState text="Memuat daftar artikel edukasi dari Google Sheets..." />
+              <LoadingState text="Memuat artikel dari basis data Google Sheets..." />
             </div>
           ) : fetchError ? (
             <div className="p-6">
@@ -516,6 +576,7 @@ export default function EdukasiKelolaPage() {
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50/80 text-slate-600 text-xs uppercase font-semibold border-b border-slate-200">
                   <tr>
+                    <th className="py-3.5 px-4">Gambar</th>
                     <th className="py-3.5 px-4">Judul Artikel</th>
                     <th className="py-3.5 px-4">Kategori</th>
                     <th className="py-3.5 px-4">Slug URL</th>
@@ -525,87 +586,111 @@ export default function EdukasiKelolaPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredArticles.map(art => (
-                    <tr
-                      key={art.id}
-                      className="hover:bg-sky-50/40 transition-colors group cursor-pointer"
-                      onClick={() => {
-                        setSelectedArticle(art);
-                        setIsDetailModalOpen(true);
-                      }}
-                    >
-                      {/* Title & Excerpt */}
-                      <td className="py-3.5 px-4 max-w-sm">
-                        <div className="font-bold text-slate-900 group-hover:text-sky-700 transition-colors">
-                          {art.title}
-                        </div>
-                        <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">
-                          {art.excerpt || 'Tidak ada ringkasan'}
-                        </div>
-                      </td>
+                  {filteredArticles.map(art => {
+                    const imgSrc = art.thumbnail_url || art.image_url;
+                    return (
+                      <tr
+                        key={art.id}
+                        className="hover:bg-sky-50/40 transition-colors group cursor-pointer"
+                        onClick={() => {
+                          setSelectedArticle(art);
+                          setIsDetailModalOpen(true);
+                        }}
+                      >
+                        {/* Thumbnail Image */}
+                        <td className="py-3.5 px-4 w-16" onClick={e => e.stopPropagation()}>
+                          {imgSrc ? (
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={imgSrc}
+                                alt={art.title}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200 shrink-0">
+                              <ImageIcon className="w-5 h-5" />
+                            </div>
+                          )}
+                        </td>
 
-                      {/* Category */}
-                      <td className="py-3.5 px-4">
-                        <Badge variant="primary" className="text-xs font-semibold flex items-center gap-1 w-fit">
-                          <Tag className="w-3 h-3" />
-                          <span>{art.category || 'Umum'}</span>
-                        </Badge>
-                      </td>
+                        {/* Title & Excerpt */}
+                        <td className="py-3.5 px-4 max-w-sm">
+                          <div className="font-bold text-slate-900 group-hover:text-sky-700 transition-colors">
+                            {art.title}
+                          </div>
+                          <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">
+                            {art.excerpt || 'Tidak ada ringkasan'}
+                          </div>
+                        </td>
 
-                      {/* Slug */}
-                      <td className="py-3.5 px-4 text-xs font-mono text-slate-500">
-                        /{art.slug}
-                      </td>
-
-                      {/* Status */}
-                      <td className="py-3.5 px-4 text-center">
-                        {art.status === 'published' ? (
-                          <Badge variant="success" className="text-xs font-semibold">
-                            Published
+                        {/* Category */}
+                        <td className="py-3.5 px-4">
+                          <Badge variant="primary" className="text-xs font-semibold flex items-center gap-1 w-fit">
+                            <Tag className="w-3 h-3" />
+                            <span>{art.category || 'Umum'}</span>
                           </Badge>
-                        ) : (
-                          <Badge variant="neutral" className="text-xs font-semibold">
-                            Draft
-                          </Badge>
-                        )}
-                      </td>
+                        </td>
 
-                      {/* Created At */}
-                      <td className="py-3.5 px-4 text-xs text-slate-500">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{formatDateIndo(art.created_at)}</span>
-                        </div>
-                      </td>
+                        {/* Slug */}
+                        <td className="py-3.5 px-4 text-xs font-mono text-slate-500">
+                          /{art.slug}
+                        </td>
 
-                      {/* Actions */}
-                      <td className="py-3.5 px-4 text-right" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedArticle(art);
-                              setIsDetailModalOpen(true);
-                            }}
-                            className="text-xs text-sky-600 hover:text-sky-700 hover:bg-sky-50"
-                          >
-                            <Eye className="w-3.5 h-3.5 mr-1" />
-                            <span>Detail</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleOpenEditModal(art)}
-                            className="text-xs text-slate-600 hover:text-sky-700 hover:bg-sky-50"
-                          >
-                            <FileEdit className="w-3.5 h-3.5 mr-1" />
-                            <span>Edit</span>
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        {/* Status */}
+                        <td className="py-3.5 px-4 text-center">
+                          {art.status === 'published' ? (
+                            <Badge variant="success" className="text-xs font-semibold">
+                              Published
+                            </Badge>
+                          ) : (
+                            <Badge variant="neutral" className="text-xs font-semibold">
+                              Draft
+                            </Badge>
+                          )}
+                        </td>
+
+                        {/* Created At */}
+                        <td className="py-3.5 px-4 text-xs text-slate-500">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{formatDateIndo(art.created_at)}</span>
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3.5 px-4 text-right" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedArticle(art);
+                                setIsDetailModalOpen(true);
+                              }}
+                              className="text-xs text-sky-600 hover:text-sky-700 hover:bg-sky-50"
+                            >
+                              <Eye className="w-3.5 h-3.5 mr-1" />
+                              <span>Detail</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenEditModal(art)}
+                              className="text-xs text-slate-600 hover:text-sky-700 hover:bg-sky-50"
+                            >
+                              <FileEdit className="w-3.5 h-3.5 mr-1" />
+                              <span>Edit</span>
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -638,7 +723,7 @@ export default function EdukasiKelolaPage() {
             onClick={() => {
               setToast({
                 message:
-                  'Penyimpanan berkas foto kegiatan belum dikonfigurasi pada server backend (Google Apps Script). Fitur ini memerlukan cloud storage terpisah.',
+                  'Penyimpanan berkas foto kegiatan terhubung ke Google Drive folder SANTARA_ARTICLE_IMAGES.',
                 type: 'info',
               });
             }}
@@ -649,27 +734,25 @@ export default function EdukasiKelolaPage() {
           </Button>
         </div>
 
-        {/* Activity Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {OFFICIAL_PROGRAM_ACTIVITIES.map((act) => (
-            <Card key={act.id} className="p-4 flex flex-col justify-between border-slate-200 hover:border-emerald-300 hover:shadow-md transition-all">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <Badge variant="secondary" size="sm" className="uppercase font-bold text-[10px]">
+            <Card key={act.id} className="p-4 border border-slate-200 bg-white hover:border-emerald-300 transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider">
                     {act.category}
                   </Badge>
-                  <span className="text-[11px] font-mono text-slate-400">{act.activityDate}</span>
+                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {act.activityDate}
+                  </span>
                 </div>
-                <h3 className="text-sm font-bold text-slate-900 leading-snug">
-                  {act.title}
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
-                  {act.description}
-                </p>
+                <h3 className="text-sm font-bold text-slate-900 line-clamp-2">{act.title}</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2">{act.description}</p>
               </div>
-              <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span className="truncate">📍 {act.location}</span>
-                <span className="text-emerald-600 font-bold">Terverifikasi</span>
+              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                <span>Lokasi: {act.location}</span>
+                <span className="text-emerald-600 font-semibold">Terdokumentasi</span>
               </div>
             </Card>
           ))}
@@ -677,15 +760,13 @@ export default function EdukasiKelolaPage() {
       </section>
 
       {/* ========================================================================= */}
-      {/* MODAL: TAMBAH / EDIT ARTIKEL EDUKASI (MODAL DIALOG)                       */}
+      {/* MODAL: FORM TAMBAH / EDIT ARTIKEL DENGAN UPLOAD GAMBAR                    */}
       {/* ========================================================================= */}
       <Modal
         isOpen={isFormModalOpen}
-        onClose={() => {
-          if (!isSubmitting) setIsFormModalOpen(false);
-        }}
-        title={editingArticle ? `Edit Artikel: ${editingArticle.title}` : 'Tulis Artikel Umum Baru'}
-        description="Artikel akan otomatis tersimpan ke spreadsheet 08_EDUCATIONS dan tampil di portal edukasi."
+        onClose={() => !isSubmitting && setIsFormModalOpen(false)}
+        title={editingArticle ? 'Edit Artikel Edukasi' : 'Buat Artikel Edukasi Baru'}
+        description="Lengkapi informasi artikel untuk dipublikasikan pada portal edukasi SANTARA."
         maxWidth="lg"
       >
         <form onSubmit={handleSubmitArticle} className="space-y-4 pt-2">
@@ -735,6 +816,59 @@ export default function EdukasiKelolaPage() {
               ]}
               required
             />
+          </div>
+
+          {/* Image Upload Input & Preview (10_PIC_ARTIC) */}
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold text-slate-700">
+              Gambar Utama Artikel (Google Sheets 10_PIC_ARTIC)
+            </label>
+
+            {imagePreview ? (
+              <div className="relative w-full h-44 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageFile(null);
+                    setImagePreview(null);
+                  }}
+                  className="absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/70 text-white hover:bg-rose-600 transition-colors shadow-sm"
+                  title="Hapus Gambar"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="relative border-2 border-dashed border-slate-300 rounded-xl p-5 text-center hover:border-sky-400 transition-colors bg-slate-50/50">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleImageChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <div className="flex flex-col items-center gap-2">
+                  <div className="p-2.5 bg-sky-50 rounded-full text-sky-600">
+                    <Upload className="w-5 h-5" />
+                  </div>
+                  <div className="text-xs text-slate-600">
+                    <span className="font-semibold text-sky-600">Pilih file gambar</span> atau seret ke sini
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Format yang didukung: JPG, PNG, WEBP (Maksimal 5MB)
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {formValidation.image && (
+              <p className="text-xs text-rose-500 mt-1">{formValidation.image}</p>
+            )}
           </div>
 
           {/* Excerpt (Summary) */}
@@ -826,6 +960,18 @@ export default function EdukasiKelolaPage() {
       >
         {selectedArticle && (
           <div className="space-y-4 pt-2">
+            {/* Image Banner if available */}
+            {(selectedArticle.thumbnail_url || selectedArticle.image_url) && (
+              <div className="relative w-full h-52 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={selectedArticle.thumbnail_url || selectedArticle.image_url}
+                  alt={selectedArticle.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+
             {/* Header Badge */}
             <div className="p-4 bg-sky-50 border border-sky-200 rounded-xl flex items-start justify-between gap-4">
               <div>

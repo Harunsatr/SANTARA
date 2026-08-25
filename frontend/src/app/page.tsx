@@ -90,6 +90,7 @@ export default function HomePage() {
   }, []);
 
   const partnerLogos = [
+    { name: 'Direktorat Riset, Teknologi, dan Pengabdian kepada Masyarakat (DRTPM / Dikti Sains)', src: '/Logo/LogoDiktiSains.png' },
     { name: 'BIMA Kemendikbudristek', src: '/Logo/LogoBima.jpeg' },
     { name: 'Universitas Negeri Malang', src: '/Logo/LogoUM.jpeg' },
     { name: 'FIK Universitas Negeri Malang', src: '/Logo/LogoFIK.jpeg' },
@@ -408,10 +409,15 @@ export default function HomePage() {
                 </p>
               </div>
               <div className="mt-4 pt-3 border-t border-cyan-100">
-                <Link href="/login" className="text-xs font-bold text-cyan-600 hover:text-cyan-700 flex items-center gap-1">
-                  <span>Lihat Format JAKRA</span>
+                <a
+                  href="https://drive.google.com/file/d/18pUXE47Lp1gzSQRWU18PK67D1sIOI4wE/view?usp=sharing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-bold text-cyan-600 hover:text-cyan-700 flex items-center gap-1"
+                >
+                  <span>Buka Kartu JAKRA</span>
                   <ChevronRight className="w-3.5 h-3.5" />
-                </Link>
+                </a>
               </div>
             </Card>
 
@@ -430,12 +436,12 @@ export default function HomePage() {
               </div>
               <div className="mt-4 pt-3 border-t border-emerald-100">
                 <a
-                  href="/docs/PANDUAN_PENGGUNAAN_SANTARA.pdf"
+                  href="https://drive.google.com/file/d/1mVivcmQnEYXayW2Dr1fcMXk0Erq6TT2t/view?usp=sharing"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
                 >
-                  <span>Download Materi</span>
+                  <span>Buka Buku Panduan</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </a>
               </div>

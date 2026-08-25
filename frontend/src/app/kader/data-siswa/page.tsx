@@ -925,8 +925,17 @@ export default function DataSiswaPage() {
               )}
             </div>
 
-            {/* Close Button */}
-            <div className="flex justify-end pt-2">
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between pt-2">
+              <a
+                href="https://drive.google.com/file/d/18pUXE47Lp1gzSQRWU18PK67D1sIOI4wE/view?usp=sharing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-bold text-sky-600 hover:underline inline-flex items-center gap-1"
+              >
+                <span>Buka Format Cetak JAKRA (F4)</span>
+                <span className="text-[10px]">&rarr;</span>
+              </a>
               <Button
                 variant="outline"
                 size="sm"

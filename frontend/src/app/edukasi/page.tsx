@@ -7,6 +7,7 @@ import {
   Button,
   LoadingState,
   Input,
+  Modal,
 } from '@/components/ui';
 import { fetchEducations } from '@/lib/api';
 import { EducationArticle } from '@/types/models';
@@ -22,6 +23,9 @@ import {
   RotateCcw,
   Search,
   Layers,
+  FileText,
+  ExternalLink,
+  ImageIcon,
 } from 'lucide-react';
 
 export default function PublicEducationPage() {
@@ -30,6 +34,7 @@ export default function PublicEducationPage() {
   const [loadingArticles, setLoadingArticles] = useState(true);
   const [articleCategory, setArticleCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedArticle, setSelectedArticle] = useState<EducationArticle | null>(null);
 
   // Interactive Education State
   const [gender, setGender] = useState<'L' | 'P'>('P');
@@ -443,54 +448,84 @@ export default function PublicEducationPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {filteredArticles.map(art => (
-              <Card
-                key={art.id}
-                className="p-6 flex flex-col justify-between border-slate-200/80 hover:border-sky-300 hover:shadow-md transition-all bg-white"
-              >
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="secondary" size="sm">
-                      {art.category || 'UMUM'}
-                    </Badge>
-                    <span className="text-[11px] text-slate-400">
-                      {formatDateIndonesian(art.created_at)}
-                    </span>
+            {filteredArticles.map(art => {
+              const imageSrc = art.thumbnail_url || art.image_url;
+              return (
+                <Card
+                  key={art.id}
+                  onClick={() => setSelectedArticle(art)}
+                  className="flex flex-col justify-between border-slate-200/80 hover:border-sky-300 hover:shadow-md transition-all bg-white cursor-pointer group overflow-hidden"
+                >
+                  {/* Article Image Banner */}
+                  {imageSrc ? (
+                    <div className="relative w-full h-44 bg-slate-100 overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={imageSrc}
+                        alt={art.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          // Fallback on image load error
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full h-28 bg-gradient-to-br from-sky-50 to-slate-100 flex items-center justify-center text-sky-600/60 border-b border-slate-100">
+                      <ImageIcon className="w-8 h-8 stroke-[1.5]" />
+                    </div>
+                  )}
+
+                  <div className="p-5 flex flex-col gap-3 flex-1 justify-between">
+                    <div className="flex flex-col gap-2.5">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="secondary" size="sm">
+                          {art.category || 'UMUM'}
+                        </Badge>
+                        <span className="text-[11px] text-slate-400">
+                          {formatDateIndonesian(art.created_at)}
+                        </span>
+                      </div>
+                      <h3 className="text-base font-bold text-slate-900 group-hover:text-sky-600 transition-colors line-clamp-2">
+                        {art.title}
+                      </h3>
+                      <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
+                        {art.excerpt || art.content.slice(0, 150)}...
+                      </p>
+                    </div>
+                    <div className="pt-3 mt-2 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-sky-600">
+                      <span>Ditulis oleh: {art.created_by || 'Tim Penulis'}</span>
+                      <span className="group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
+                        Baca Selengkapnya &rarr;
+                      </span>
+                    </div>
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 line-clamp-2">
-                    {art.title}
-                  </h3>
-                  <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
-                    {art.excerpt || art.content.slice(0, 150)}...
-                  </p>
-                </div>
-                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-sky-600">
-                  <span>Ditulis oleh: {art.created_by || 'Tim Penulis'}</span>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
       </section>
 
-      {/* 5. BUKU PANDUAN RESMI (PDF DOWNLOAD) */}
-      <section className="p-6 sm:p-8 rounded-3xl bg-slate-900 text-white border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+      {/* 5. DOKUMEN PANDUAN RESMI & KARTU JAKRA (GOOGLE DRIVE INTEGRATION) */}
+      <section className="p-6 sm:p-8 rounded-3xl bg-slate-900 text-white border border-slate-800 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
         <div className="flex flex-col gap-2 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full text-xs font-bold uppercase tracking-wider w-fit">
             <BookOpen className="w-3.5 h-3.5" />
-            <span>Dokumen Panduan Resmi</span>
+            <span>Dokumen Panduan &amp; Format Rekam Resmi</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-white font-display">
-            Panduan Terpadu: Pengukuran Status Gizi dan Skrining Kesehatan Remaja di Sekolah
+            Buku Panduan Terpadu UKS &amp; Kartu Jejak Kesehatan Remaja (JAKRA)
           </h2>
           <p className="text-xs text-slate-300 leading-relaxed">
-            Format resmi pedoman teknis pengukuran antropometri (TB, BB, Standar WHO), pemantauan kesehatan, serta tata laksana pembiasaan hidup sehat bagi sekolah.
+            Akses dokumen resmi pedoman teknis pengukuran antropometri (TB, BB, Standar WHO), pemantauan kesehatan berkala, serta format kartu fisik JAKRA (Jejak Kesehatan Remaja) di Google Drive.
           </p>
         </div>
 
-        <div className="shrink-0 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 shrink-0 w-full lg:w-auto">
+          {/* Buku Panduan Google Drive */}
           <a
-            href="/docs/PANDUAN_PENGGUNAAN_SANTARA.pdf"
+            href="https://drive.google.com/file/d/1mVivcmQnEYXayW2Dr1fcMXk0Erq6TT2t/view?usp=sharing"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full sm:w-auto inline-flex"
@@ -499,13 +534,90 @@ export default function PublicEducationPage() {
               variant="primary"
               size="md"
               className="w-full sm:w-auto font-bold bg-emerald-600 hover:bg-emerald-700 shadow-md text-xs sm:text-sm"
-              rightIcon={<BookOpen className="w-4 h-4" />}
+              leftIcon={<BookOpen className="w-4 h-4" />}
+              rightIcon={<ExternalLink className="w-3.5 h-3.5 ml-1 opacity-80" />}
             >
-              Download Materi
+              Buka Buku Panduan
+            </Button>
+          </a>
+
+          {/* Kartu JAKRA Google Drive */}
+          <a
+            href="https://drive.google.com/file/d/18pUXE47Lp1gzSQRWU18PK67D1sIOI4wE/view?usp=sharing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto inline-flex"
+          >
+            <Button
+              variant="outline"
+              size="md"
+              className="w-full sm:w-auto font-bold bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs sm:text-sm"
+              leftIcon={<FileText className="w-4 h-4" />}
+              rightIcon={<ExternalLink className="w-3.5 h-3.5 ml-1 opacity-80" />}
+            >
+              Buka Kartu JAKRA
             </Button>
           </a>
         </div>
       </section>
+
+      {/* ARTICLE READER MODAL */}
+      {selectedArticle && (
+        <Modal
+          isOpen={!!selectedArticle}
+          onClose={() => setSelectedArticle(null)}
+          title={selectedArticle.title}
+          maxWidth="lg"
+        >
+          <div className="flex flex-col gap-5 max-h-[75vh] overflow-y-auto pr-1">
+            {/* Image Banner if available */}
+            {(selectedArticle.thumbnail_url || selectedArticle.image_url) && (
+              <div className="relative w-full h-56 sm:h-72 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={selectedArticle.thumbnail_url || selectedArticle.image_url}
+                  alt={selectedArticle.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+
+            {/* Metadata bar */}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 pb-3 border-b border-slate-100">
+              <Badge variant="primary" size="sm">
+                {selectedArticle.category || 'UMUM'}
+              </Badge>
+              <span>•</span>
+              <span>Dipublikasikan: {formatDateIndonesian(selectedArticle.created_at)}</span>
+              <span>•</span>
+              <span>Penulis: {selectedArticle.created_by || 'Tim Penulis'}</span>
+            </div>
+
+            {/* Excerpt */}
+            {selectedArticle.excerpt && (
+              <div className="p-4 rounded-xl bg-sky-50 border-l-4 border-sky-500 text-xs sm:text-sm text-sky-950 font-medium leading-relaxed italic">
+                &ldquo;{selectedArticle.excerpt}&rdquo;
+              </div>
+            )}
+
+            {/* Content body */}
+            <div className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+              {selectedArticle.content}
+            </div>
+
+            {/* Modal footer action */}
+            <div className="pt-4 border-t border-slate-100 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedArticle(null)}
+              >
+                Tutup Artikel
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
