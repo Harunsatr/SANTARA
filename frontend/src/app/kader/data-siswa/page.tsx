@@ -30,9 +30,10 @@ import {
   GraduationCap,
   Sparkles,
   Eye,
+  Pencil,
 } from 'lucide-react';
 import { Student, School, ClassRoom, StudentWithAge } from '@/types/models';
-import { fetchStudents, createStudent } from '@/lib/api/students';
+import { fetchStudents, createStudent, updateStudent } from '@/lib/api/students';
 import { fetchSchools } from '@/lib/api/schools';
 import { fetchClasses } from '@/lib/api/classes';
 import { adaptStudentForUI, filterValidClasses, resolveClassName } from '@/lib/adapters/schoolAdapter';
@@ -75,6 +76,22 @@ export default function DataSiswaPage() {
   const [formValidation, setFormValidation] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  // Edit Student Modal states
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<StudentWithAge | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    id: '',
+    school_id: '',
+    class_id: '',
+    student_code: '',
+    nama: '',
+    gender: 'L' as 'L' | 'P',
+    birth_date: '',
+    status: 'active' as 'active' | 'inactive',
+  });
+  const [editFormValidation, setEditFormValidation] = useState<{ [key: string]: string }>({});
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
   // 1. Initial Load & Synchronization Function
   useEffect(() => {
@@ -316,6 +333,95 @@ export default function DataSiswaPage() {
       setFormValidation({ general: msg });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // 6b. Open Edit Student Modal Handler
+  const handleOpenEditStudent = (student: StudentWithAge) => {
+    setEditingStudent(student);
+    setEditFormData({
+      id: student.id,
+      school_id: student.school_id || 'SCH001',
+      class_id: student.class_id,
+      student_code: student.student_code || '',
+      nama: student.nama,
+      gender: student.gender === 'P' ? 'P' : 'L',
+      birth_date: student.birth_date ? student.birth_date.split('T')[0] : '',
+      status: student.status === 'inactive' ? 'inactive' : 'active',
+    });
+    setEditFormValidation({});
+    setIsDetailModalOpen(false);
+    setIsEditModalOpen(true);
+  };
+
+  // 6c. Submit Edit Student Handler
+  const handleUpdateStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStudent) return;
+
+    const errors: { [key: string]: string } = {};
+    const cleanName = editFormData.nama.trim();
+    if (!cleanName) {
+      errors.nama = 'Nama siswa wajib diisi.';
+    } else if (/^\d+$/.test(cleanName)) {
+      errors.nama = 'Nama siswa harus berupa huruf/teks.';
+    } else if (/^STD\d+$/i.test(cleanName)) {
+      errors.nama = 'Nama siswa tidak boleh berupa format ID teknis (STDxxx).';
+    }
+
+    if (!editFormData.class_id) {
+      errors.class_id = 'Pilih kelas siswa.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setEditFormValidation(errors);
+      return;
+    }
+
+    setIsSubmittingEdit(true);
+    try {
+      const payload = {
+        id: editingStudent.id,
+        school_id: editFormData.school_id || 'SCH001',
+        class_id: editFormData.class_id,
+        student_code: editFormData.student_code || undefined,
+        nama: cleanName,
+        gender: editFormData.gender,
+        birth_date: editFormData.birth_date || undefined,
+        status: editFormData.status,
+        user_id: user?.id || 'USR001',
+      };
+
+      const res = await updateStudent(payload);
+
+      if (res.success && res.data) {
+        const updatedStudent = res.data;
+        setStudents(prev =>
+          prev.map(s => (s.id === updatedStudent.id ? updatedStudent : s))
+        );
+
+        setToast({
+          message: `Data siswa "${updatedStudent.nama}" (ID: ${updatedStudent.id}) berhasil diperbarui di Google Sheets.`,
+          type: 'success',
+        });
+        setIsEditModalOpen(false);
+
+        // Background sync to ensure fresh spreadsheet sync
+        fetchStudents().then(freshRes => {
+          if (freshRes.success && freshRes.data) {
+            setStudents(freshRes.data);
+          }
+        });
+      } else {
+        setEditFormValidation({
+          general: res.message || 'Gagal memperbarui data siswa di Google Sheets.',
+        });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan sistem saat memperbarui data.';
+      setEditFormValidation({ general: msg });
+    } finally {
+      setIsSubmittingEdit(false);
     }
   };
 
@@ -675,18 +781,29 @@ export default function DataSiswaPage() {
                         className="py-3.5 px-4 text-right"
                         onClick={e => e.stopPropagation()}
                       >
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedStudent(st);
-                            setIsDetailModalOpen(true);
-                          }}
-                          className="text-xs text-sky-600 hover:text-sky-700 hover:bg-sky-50"
-                        >
-                          <Eye className="w-3.5 h-3.5 mr-1" />
-                          <span>JAKRA</span>
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedStudent(st);
+                              setIsDetailModalOpen(true);
+                            }}
+                            className="text-xs text-sky-600 hover:text-sky-700 hover:bg-sky-50 px-2 py-1 h-auto"
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1" />
+                            <span>JAKRA</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenEditStudent(st)}
+                            className="text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-2 py-1 h-auto"
+                          >
+                            <Pencil className="w-3.5 h-3.5 mr-1" />
+                            <span>Edit</span>
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -927,17 +1044,186 @@ export default function DataSiswaPage() {
                 <span>Buka Format Cetak JAKRA (F4)</span>
                 <span className="text-[10px]">&rarr;</span>
               </a>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsDetailModalOpen(false)}
-              >
-                Tutup
-              </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsDetailModalOpen(false)}
+                  >
+                    Tutup
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleOpenEditStudent(selectedStudent)}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                  >
+                    <Pencil className="w-3.5 h-3.5 mr-1" />
+                    <span>Edit Siswa</span>
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+        </Modal>
+
+        {/* ========================================================================= */}
+        {/* MODAL: EDIT DATA SISWA                                                    */}
+        {/* ========================================================================= */}
+        {editingStudent && (
+          <Modal
+            isOpen={isEditModalOpen}
+            onClose={() => {
+              if (!isSubmittingEdit) setIsEditModalOpen(false);
+            }}
+            title="Edit Data Siswa"
+            description="Perubahan profil siswa akan diperbarui langsung pada baris Google Sheets 04_STUDENTS yang sama."
+            maxWidth="lg"
+          >
+            <form onSubmit={handleUpdateStudent} className="space-y-4 pt-2">
+              {editFormValidation.general && (
+                <Alert variant="error" title="Gagal Menyimpan Perubahan">
+                  {editFormValidation.general}
+                </Alert>
+              )}
+
+              {/* Read-Only System Identity Info */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Identitas Sistem Siswa
+                  </span>
+                  <p className="text-xs font-semibold text-slate-800 mt-0.5">
+                    ID: <span className="font-mono">{editingStudent.id}</span>
+                  </p>
+                </div>
+                {editingStudent.student_code && (
+                  <div className="text-right">
+                    <span className="text-xs font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-700">
+                      No. Induk: {editingStudent.student_code}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* School & Class Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Select
+                  label="Sekolah Mitra"
+                  name="edit_school_id"
+                  value={editFormData.school_id}
+                  onChange={e => setEditFormData(prev => ({ ...prev, school_id: e.target.value }))}
+                  options={schools.map(s => ({
+                    label: `${s.name} (${s.id})`,
+                    value: s.id,
+                  }))}
+                  required
+                />
+
+                <Select
+                  label="Kelas Siswa"
+                  name="edit_class_id"
+                  value={editFormData.class_id}
+                  onChange={e => setEditFormData(prev => ({ ...prev, class_id: e.target.value }))}
+                  options={classes.map(c => ({
+                    label: resolveClassName(c.id, classes),
+                    value: c.id,
+                  }))}
+                  error={editFormValidation.class_id}
+                  required
+                />
+              </div>
+
+              {/* Student Code & Name Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Input
+                    label="Nomor / Kode Siswa (student_code)"
+                    name="edit_student_code"
+                    placeholder="Contoh: 10_A, 11_B"
+                    value={editFormData.student_code}
+                    onChange={e => setEditFormData(prev => ({ ...prev, student_code: e.target.value }))}
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Kode identitas unik siswa dalam rombel.
+                  </p>
+                </div>
+
+                <div>
+                  <Input
+                    label="Nama Lengkap Siswa"
+                    name="edit_nama"
+                    placeholder="Contoh: Siti Rahmawati"
+                    value={editFormData.nama}
+                    onChange={e => setEditFormData(prev => ({ ...prev, nama: e.target.value }))}
+                    error={editFormValidation.nama}
+                    required
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Nama lengkap siswa tanpa gelar.
+                  </p>
+                </div>
+              </div>
+
+              {/* Gender, Birth Date & Status Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Select
+                  label="Jenis Kelamin"
+                  name="edit_gender"
+                  value={editFormData.gender}
+                  onChange={e => setEditFormData(prev => ({ ...prev, gender: e.target.value as 'L' | 'P' }))}
+                  options={[
+                    { label: 'Perempuan (P)', value: 'P' },
+                    { label: 'Laki-laki (L)', value: 'L' },
+                  ]}
+                  required
+                />
+
+                <Input
+                  label="Tanggal Lahir"
+                  type="date"
+                  name="edit_birth_date"
+                  value={editFormData.birth_date}
+                  onChange={e => setEditFormData(prev => ({ ...prev, birth_date: e.target.value }))}
+                />
+
+                <Select
+                  label="Status Kesiswaan"
+                  name="edit_status"
+                  value={editFormData.status}
+                  onChange={e => setEditFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
+                  options={[
+                    { label: 'Aktif (Mengikuti Program)', value: 'active' },
+                    { label: 'Nonaktif / Lulus', value: 'inactive' },
+                  ]}
+                  required
+                />
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isSubmittingEdit}
+                  onClick={() => setIsEditModalOpen(false)}
+                >
+                  Batal
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  isLoading={isSubmittingEdit}
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                >
+                  {isSubmittingEdit ? 'Menyimpan Perubahan...' : 'Simpan Perubahan'}
+                </Button>
+              </div>
+            </form>
+          </Modal>
         )}
-      </Modal>
-    </div>
-  );
-}
+      </div>
+    );
+  }

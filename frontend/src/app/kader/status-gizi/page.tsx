@@ -29,9 +29,10 @@ import {
   Sparkles,
   Eye,
   PlusCircle,
+  Pencil,
 } from 'lucide-react';
 import { Student, School, ClassRoom, ExaminationWithLiLA } from '@/types/models';
-import { fetchExaminations, createExamination } from '@/lib/api/examinations';
+import { fetchExaminations, createExamination, updateExamination } from '@/lib/api/examinations';
 import { fetchStudents, createStudent } from '@/lib/api/students';
 import { fetchSchools } from '@/lib/api/schools';
 import { fetchClasses, createClass } from '@/lib/api/classes';
@@ -92,6 +93,17 @@ export default function StatusGiziPage() {
   const [formValidation, setFormValidation] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  // Edit Examination Modal states
+  const [isEditExamModalOpen, setIsEditExamModalOpen] = useState(false);
+  const [editingExam, setEditingExam] = useState<ExaminationWithLiLA | null>(null);
+  const [editExamDate, setEditExamDate] = useState(getTodayDateString());
+  const [editExamHeight, setEditExamHeight] = useState('');
+  const [editExamWeight, setEditExamWeight] = useState('');
+  const [editExamLiLA, setEditExamLiLA] = useState('');
+  const [editExamCustomNotes, setEditExamCustomNotes] = useState('');
+  const [editFormValidation, setEditFormValidation] = useState<{ [key: string]: string }>({});
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
   // 1. Initial Load & Synchronization Function
   useEffect(() => {
@@ -455,19 +467,143 @@ export default function StatusGiziPage() {
     }
   };
 
+  // 7b. Live Nutrition Preview for Edit Form
+  const editNutritionPreview = useMemo(() => {
+    const h = parseFloat(editExamHeight);
+    const w = parseFloat(editExamWeight);
+    if (isNaN(h) || h <= 0 || isNaN(w) || w <= 0) {
+      return null;
+    }
+    const bmiVal = calculateBMI(w, h);
+    if (bmiVal === null) return null;
+
+    let status = 'Gizi Baik (Normal)';
+    if (bmiVal < 17.0) status = 'Severely Thinness';
+    else if (bmiVal < 18.5) status = 'Thinness';
+    else if (bmiVal < 25.0) status = 'Normal';
+    else if (bmiVal < 30.0) status = 'Overweight';
+    else status = 'Obese';
+
+    return {
+      bmi: bmiVal,
+      status,
+      style: getNutritionStyle(status),
+    };
+  }, [editExamHeight, editExamWeight]);
+
+  // 7c. Open Edit Examination Modal
+  const handleOpenEditExam = (exam: ExaminationWithLiLA) => {
+    setEditingExam(exam);
+    setEditExamDate(exam.examination_date ? exam.examination_date.split('T')[0] : getTodayDateString());
+    setEditExamHeight(String(exam.height_cm || ''));
+    setEditExamWeight(String(exam.weight_kg || ''));
+    setEditExamLiLA(exam.lila_cm !== undefined && exam.lila_cm !== null ? String(exam.lila_cm) : '');
+    setEditExamCustomNotes(exam.clean_notes || '');
+    setEditFormValidation({});
+    setIsDetailModalOpen(false);
+    setIsEditExamModalOpen(true);
+  };
+
+  // 7d. Update Examination Handler
+  const handleUpdateExamination = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingExam) return;
+
+    const errors: { [key: string]: string } = {};
+    if (!editExamDate) errors.date = 'Pilih tanggal pemeriksaan.';
+
+    const h = parseFloat(editExamHeight);
+    if (isNaN(h) || h <= 0 || h > 250) {
+      errors.height = 'Tinggi badan harus berupa angka valid (misal: 155 cm).';
+    }
+
+    const w = parseFloat(editExamWeight);
+    if (isNaN(w) || w <= 0 || w > 250) {
+      errors.weight = 'Berat badan harus berupa angka valid (misal: 48.5 kg).';
+    }
+
+    if (editExamLiLA.trim() !== '') {
+      const lilaVal = parseFloat(editExamLiLA);
+      if (isNaN(lilaVal) || lilaVal < 0 || lilaVal > 70) {
+        errors.lila = 'LiLA harus berupa angka valid (misal: 23.5 cm).';
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setEditFormValidation(errors);
+      return;
+    }
+
+    setIsSubmittingEdit(true);
+    try {
+      const serializedNotes = serializeExaminationNotes(
+        editExamLiLA ? parseFloat(editExamLiLA) : undefined,
+        editExamCustomNotes
+      );
+
+      const payload = {
+        id: editingExam.id,
+        student_id: editingExam.student_id,
+        class_id: editingExam.class_id,
+        examination_date: editExamDate,
+        height_cm: h,
+        weight_kg: w,
+        notes: serializedNotes,
+        user_id: user?.id || 'USR001',
+      };
+
+      const res = await updateExamination(payload);
+
+      if (res.success && res.data) {
+        const adaptedUpdated = adaptExaminationsFromApi([res.data])[0];
+        setExaminations(prev =>
+          prev.map(ex => (ex.id === adaptedUpdated.id ? adaptedUpdated : ex))
+        );
+
+        setToast({
+          message: `Data pemeriksaan untuk ${studentMap.get(editingExam.student_id)?.nama || editingExam.id} berhasil diperbarui di Google Sheets.`,
+          type: 'success',
+        });
+        setIsEditExamModalOpen(false);
+
+        // Background sync to ensure fresh spreadsheet sync
+        fetchExaminations().then(freshRes => {
+          if (freshRes.success && freshRes.data) {
+            setExaminations(adaptExaminationsFromApi(freshRes.data));
+          }
+        });
+      } else {
+        setEditFormValidation({
+          general: res.message || 'Gagal memperbarui data pemeriksaan di Google Sheets.',
+        });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan sistem saat memperbarui data.';
+      setEditFormValidation({ general: msg });
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  };
+
   // 8. Student Lookup Map for Table Rendering
-  const studentMap = useMemo(() => {
-    const map = new Map<string, ReturnType<typeof adaptStudentForUI>>();
-    students.forEach(s => {
-      map.set(s.id, adaptStudentForUI(s, schools, classes));
-    });
-    return map;
-  }, [students, schools, classes]);
+  const studentMap = new Map<string, ReturnType<typeof adaptStudentForUI>>();
+  students.forEach(s => {
+    if (s.id) {
+      studentMap.set(s.id, adaptStudentForUI(s, schools, classes));
+    }
+  });
 
   // 9. Filtered Examinations List
   const filteredExaminations = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof adaptStudentForUI>>();
+    students.forEach(s => {
+      if (s.id) {
+        map.set(s.id, adaptStudentForUI(s, schools, classes));
+      }
+    });
+
     return examinations.filter(ex => {
-      const st = studentMap.get(ex.student_id);
+      const st = map.get(ex.student_id);
 
       if (searchQuery.trim() !== '') {
         const q = searchQuery.toLowerCase();
@@ -488,7 +624,7 @@ export default function StatusGiziPage() {
 
       return true;
     });
-  }, [examinations, studentMap, searchQuery, filterClass, filterStatusGizi]);
+  }, [examinations, students, schools, classes, searchQuery, filterClass, filterStatusGizi]);
 
   // 10. Metric Summaries
   const stats = useMemo(() => {
@@ -801,18 +937,29 @@ export default function StatusGiziPage() {
 
                         {/* Action */}
                         <td className="py-3.5 px-4 text-right" onClick={e => e.stopPropagation()}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedExam(ex);
-                              setIsDetailModalOpen(true);
-                            }}
-                            className="text-xs text-sky-600 hover:text-sky-700 hover:bg-sky-50"
-                          >
-                            <Eye className="w-3.5 h-3.5 mr-1" />
-                            <span>Detail</span>
-                          </Button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedExam(ex);
+                                setIsDetailModalOpen(true);
+                              }}
+                              className="text-xs text-sky-600 hover:text-sky-700 hover:bg-sky-50 px-2 py-1 h-auto"
+                            >
+                              <Eye className="w-3.5 h-3.5 mr-1" />
+                              <span>Detail</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenEditExam(ex)}
+                              className="text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-2 py-1 h-auto"
+                            >
+                              <Pencil className="w-3.5 h-3.5 mr-1" />
+                              <span>Edit</span>
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1255,7 +1402,7 @@ export default function StatusGiziPage() {
                   )}
                 </div>
 
-                <div className="flex justify-end pt-2">
+                <div className="flex items-center justify-end gap-2 pt-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -1263,8 +1410,180 @@ export default function StatusGiziPage() {
                   >
                     Tutup
                   </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleOpenEditExam(selectedExam)}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                  >
+                    <Pencil className="w-3.5 h-3.5 mr-1" />
+                    <span>Edit Pemeriksaan</span>
+                  </Button>
                 </div>
               </div>
+            );
+          })()}
+        </Modal>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: EDIT PEMERIKSAAN STATUS GIZI                                       */}
+      {/* ========================================================================= */}
+      {editingExam && (
+        <Modal
+          isOpen={isEditExamModalOpen}
+          onClose={() => {
+            if (!isSubmittingEdit) setIsEditExamModalOpen(false);
+          }}
+          title="Edit Pemeriksaan Status Gizi"
+          description="Perubahan data pemeriksaan akan diperbarui langsung pada baris Google Sheets 05_EXAMINATIONS yang sama."
+          maxWidth="lg"
+        >
+          {(() => {
+            const student = studentMap.get(editingExam.student_id);
+
+            return (
+              <form onSubmit={handleUpdateExamination} className="space-y-4 pt-2">
+                {editFormValidation.general && (
+                  <Alert variant="error" title="Gagal Menyimpan Perubahan">
+                    {editFormValidation.general}
+                  </Alert>
+                )}
+
+                {/* Read-Only Student & Class Identity Info */}
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Identitas Siswa (ID: {editingExam.student_id})
+                    </span>
+                    <h4 className="text-sm font-bold text-slate-900 mt-0.5">
+                      {student?.nama || 'Siswa SANTARA'}
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {resolveClassName(editingExam.class_id, classes)} • {student?.gender === 'P' ? 'Perempuan' : 'Laki-laki'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-700">
+                      ID: {editingExam.id}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Date Input */}
+                <Input
+                  label="Tanggal Pemeriksaan"
+                  type="date"
+                  name="edit_examination_date"
+                  value={editExamDate}
+                  onChange={e => setEditExamDate(e.target.value)}
+                  error={editFormValidation.date}
+                  required
+                />
+
+                {/* Height & Weight Inputs */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Tinggi Badan (cm)"
+                    type="number"
+                    step="0.1"
+                    name="edit_height_cm"
+                    placeholder="Contoh: 155"
+                    value={editExamHeight}
+                    onChange={e => setEditExamHeight(e.target.value)}
+                    error={editFormValidation.height}
+                    required
+                  />
+
+                  <Input
+                    label="Berat Badan (kg)"
+                    type="number"
+                    step="0.1"
+                    name="edit_weight_kg"
+                    placeholder="Contoh: 48.5"
+                    value={editExamWeight}
+                    onChange={e => setEditExamWeight(e.target.value)}
+                    error={editFormValidation.weight}
+                    required
+                  />
+                </div>
+
+                {/* Live BMI & Nutritional Status Recalculation Preview */}
+                {editNutritionPreview ? (
+                  <div
+                    className="p-3.5 rounded-xl border flex items-center justify-between transition-all"
+                    style={{
+                      backgroundColor: editNutritionPreview.style.bgColor,
+                      borderColor: editNutritionPreview.style.borderColor,
+                    }}
+                  >
+                    <div>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: editNutritionPreview.style.textColor }}>
+                        Hasil Perhitungan Ulang (WHO Anthro):
+                      </span>
+                      <p className="text-sm font-black mt-0.5" style={{ color: editNutritionPreview.style.textColor }}>
+                        {editNutritionPreview.style.label}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-semibold text-slate-500 block">IMT Baru</span>
+                      <span className="text-base font-black text-slate-900">{editNutritionPreview.bmi}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 italic">
+                    Masukkan nilai tinggi dan berat badan untuk melihat perhitungan IMT dan klasifikasi gizi otomatis.
+                  </div>
+                )}
+
+                {/* LiLA (Lingkar Lengan Atas) Optional */}
+                <Input
+                  label="Lingkar Lengan Atas / LiLA (cm) - Opsional"
+                  type="number"
+                  step="0.1"
+                  name="edit_lila_cm"
+                  placeholder="Contoh: 23.5 (Diisi untuk sasaran skrining anemia/KEK)"
+                  value={editExamLiLA}
+                  onChange={e => setEditExamLiLA(e.target.value)}
+                  error={editFormValidation.lila}
+                />
+
+                {/* Notes Input */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Catatan Pemeriksaan Tambahan (Opsional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none resize-none"
+                    placeholder="Contoh: Siswa aktif berolahraga, kondisi fisik bugar."
+                    value={editExamCustomNotes}
+                    onChange={e => setEditExamCustomNotes(e.target.value)}
+                  />
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isSubmittingEdit}
+                    onClick={() => setIsEditExamModalOpen(false)}
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    isLoading={isSubmittingEdit}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                  >
+                    {isSubmittingEdit ? 'Menyimpan Perubahan...' : 'Simpan Perubahan'}
+                  </Button>
+                </div>
+              </form>
             );
           })()}
         </Modal>

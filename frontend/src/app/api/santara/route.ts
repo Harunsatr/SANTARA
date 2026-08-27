@@ -190,6 +190,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Server-side Recalculation for Examinations (BMI and nutritional status)
+    if (body && (body.action === 'createExamination' || body.action === 'updateExamination') && body.data) {
+      const w = parseFloat(String(body.data.weight_kg || ''));
+      const h = parseFloat(String(body.data.height_cm || ''));
+      if (!isNaN(w) && w > 0 && !isNaN(h) && h > 0) {
+        const hMeter = h / 100;
+        const computedBmi = parseFloat((w / (hMeter * hMeter)).toFixed(2));
+        body.data.bmi = computedBmi;
+
+        if (!body.data.nutrional_status || String(body.data.nutrional_status).trim() === '') {
+          if (computedBmi < 17.0) {
+            body.data.nutrional_status = 'Gizi Buruk (Sangat Kurus)';
+          } else if (computedBmi < 18.5) {
+            body.data.nutrional_status = 'Kurus (Gizi Kurang)';
+          } else if (computedBmi < 25.0) {
+            body.data.nutrional_status = 'Gizi Baik (Normal)';
+          } else if (computedBmi < 30.0) {
+            body.data.nutrional_status = 'Gizi Lebih (Overweight)';
+          } else {
+            body.data.nutrional_status = 'Obesitas (Obese)';
+          }
+        }
+      }
+    }
+
     let attempts = 0;
     let lastError: Error | null = null;
 
