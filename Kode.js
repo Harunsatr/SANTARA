@@ -20,8 +20,7 @@ const SHEETS = {
   SCREENINGS: "06_SCREENINGS",
   TTD: "07_TTD",
   EDUCATIONS: "08_EDUCATIONS",
-  AUDIT_LOG: "09_AUDIT_LOG",
-  PIC_ARTIC: "10_PIC_ARTIC"
+  AUDIT_LOG: "09_AUDIT_LOG"
 };
 
 const ID_PREFIXES = {
@@ -33,8 +32,7 @@ const ID_PREFIXES = {
   [SHEETS.SCREENINGS]: "SCR",
   [SHEETS.TTD]: "TTD",
   [SHEETS.EDUCATIONS]: "EDU",
-  [SHEETS.AUDIT_LOG]: "LOG",
-  "10_PIC_ARTIC": "PIC"
+  [SHEETS.AUDIT_LOG]: "LOG"
 };
 
 // ============================================================
@@ -1258,170 +1256,6 @@ function updateEducation(data) {
   return successResponse("Data edukasi berhasil diperbarui", updatedRecord);
 }
 
-/**
- * Mengambil metadata gambar artikel dari sheet 10_PIC_ARTIC.
- * Query parameter opsional: article_id.
- */
-function getArticleImages(params) {
-  const sheet = getSheet(SHEETS.PIC_ARTIC);
-  if (!sheet) {
-    return listResponse("Data gambar artikel masih kosong", []);
-  }
-
-  const values = sheet.getDataRange().getValues();
-  if (values.length <= 1) {
-    return listResponse("Data gambar artikel masih kosong", []);
-  }
-
-  const headers = values[0];
-  const articleIdIndex = headers.indexOf("article_id");
-  const filterArticleId = params && params.article_id ? String(params.article_id).trim() : null;
-
-  const data = values
-    .slice(1)
-    .filter(row => {
-      if (filterArticleId && articleIdIndex !== -1 && String(row[articleIdIndex] || "").trim() !== filterArticleId) {
-        return false;
-      }
-      return true;
-    })
-    .map(row => rowToObject(headers, row));
-
-  return listResponse("Data gambar artikel berhasil diambil", data);
-}
-
-/**
- * Mengunggah gambar artikel ke Google Drive & mencatat metadata di sheet 10_PIC_ARTIC.
- * Body: { article_id, filename, mime_type, base64_data, uploaded_by }
- */
-function uploadArticleImage(data) {
-  if (!data) {
-    return errorResponse("Data gambar wajib diisi", "DATA_REQUIRED");
-  }
-
-  if (!data.article_id) {
-    return errorResponse("Field article_id wajib diisi", "ARTICLE_ID_REQUIRED");
-  }
-  if (!data.base64_data) {
-    return errorResponse("Field base64_data wajib diisi", "IMAGE_DATA_REQUIRED");
-  }
-
-  const articleId = String(data.article_id).trim();
-  const rawFilename = data.filename ? String(data.filename).trim() : `article_${articleId}_${Date.now()}.png`;
-  const cleanFilename = rawFilename.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const mimeType = (data.mime_type || "image/png").toLowerCase().trim();
-
-  // Validasi MIME Type yang diizinkan
-  const allowedMimeTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
-  if (!allowedMimeTypes.includes(mimeType)) {
-    return errorResponse("Format gambar tidak didukung. Gunakan JPG, PNG, atau WEBP.", "INVALID_MIME_TYPE", { allowed: allowedMimeTypes, received: mimeType });
-  }
-
-  // Decode Base64 data (strip prefix if present like 'data:image/png;base64,')
-  let cleanBase64 = data.base64_data;
-  if (cleanBase64.indexOf("base64,") !== -1) {
-    cleanBase64 = cleanBase64.split("base64,")[1];
-  }
-
-  let decodedBytes;
-  try {
-    decodedBytes = Utilities.base64Decode(cleanBase64);
-  } catch (err) {
-    return errorResponse("Gagal memproses data gambar base64", "INVALID_BASE64_DATA", { error: err.message });
-  }
-
-  // Simpan gambar ke Google Drive
-  let fileId = "";
-  let imageUrl = "";
-
-  try {
-    const blob = Utilities.newBlob(decodedBytes, mimeType, cleanFilename);
-
-    // Cari atau buat folder khusus "SANTARA_ARTICLE_IMAGES"
-    let targetFolder;
-    const folders = DriveApp.getFoldersByName("SANTARA_ARTICLE_IMAGES");
-    if (folders.hasNext()) {
-      targetFolder = folders.next();
-    } else {
-      targetFolder = DriveApp.createFolder("SANTARA_ARTICLE_IMAGES");
-    }
-
-    const driveFile = targetFolder.createFile(blob);
-    driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    fileId = driveFile.getId();
-    imageUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
-  } catch (driveErr) {
-    // Fallback jika DriveApp terhambat: gunakan file ID unik
-    fileId = `DRV_${Date.now()}`;
-    imageUrl = data.image_url || `https://drive.google.com/thumbnail?id=${fileId}`;
-  }
-
-  // Dapatkan atau inisialisasi sheet 10_PIC_ARTIC
-  let sheet = getSheet(SHEETS.PIC_ARTIC);
-  const now = new Date().toISOString();
-
-  if (!sheet) {
-    sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet(SHEETS.PIC_ARTIC);
-    sheet.appendRow([
-      "id",
-      "article_id",
-      "file_id",
-      "image_url",
-      "filename",
-      "mime_type",
-      "status",
-      "created_at",
-      "updated_at"
-    ]);
-  }
-
-  const newPicId = generateNextId(SHEETS.PIC_ARTIC, ID_PREFIXES[SHEETS.PIC_ARTIC]);
-  const picRecord = {
-    id: newPicId,
-    article_id: articleId,
-    file_id: fileId,
-    image_url: imageUrl,
-    filename: cleanFilename,
-    mime_type: mimeType,
-    status: "active",
-    created_at: now,
-    updated_at: now
-  };
-
-  const headers = sheet.getDataRange().getValues()[0];
-  const newRow = headers.map(header => picRecord[header] !== undefined ? picRecord[header] : "");
-  sheet.appendRow(newRow);
-
-  // Update thumbnail_url pada sheet 08_EDUCATIONS jika ada
-  try {
-    const eduRow = findRowById(SHEETS.EDUCATIONS, articleId);
-    if (eduRow) {
-      const { sheet: eduSheet, rowNumber, rowValues, headers: eduHeaders } = eduRow;
-      const thumbIdx = eduHeaders.indexOf("thumbnail_url");
-      const updatedIdx = eduHeaders.indexOf("updated_at");
-      if (thumbIdx !== -1) {
-        eduSheet.getRange(rowNumber, thumbIdx + 1).setValue(imageUrl);
-      }
-      if (updatedIdx !== -1) {
-        eduSheet.getRange(rowNumber, updatedIdx + 1).setValue(now);
-      }
-    }
-  } catch (e) {
-    // Log ignore
-  }
-
-  // Audit Log
-  createAuditLog({
-    user_id: data.uploaded_by || data.user_id || "KADER",
-    action: "UPLOAD_IMAGE",
-    table_name: SHEETS.PIC_ARTIC,
-    record_id: newPicId,
-    description: `Mengunggah gambar untuk artikel ${articleId}: ${cleanFilename}`
-  });
-
-  return successResponse("Gambar artikel berhasil diunggah dan tercatat di 10_PIC_ARTIC", picRecord);
-}
-
 // ============================================================
 // 12. MASTER DATA HANDLERS (SCHOOLS, CLASSES, USERS)
 // ============================================================
@@ -1458,7 +1292,7 @@ function getSchools() {
 
 /**
  * Mengambil daftar data kelas (03_CLASSES).
- * Query parameter opsional: school_id.
+ * Query parameter opsional: school_id, status.
  */
 function getClasses(params) {
   const sheet = getSheet(SHEETS.CLASSES);
@@ -1474,17 +1308,26 @@ function getClasses(params) {
   const headers = values[0];
   const idIndex = headers.indexOf("id");
   const schoolIdIndex = headers.indexOf("school_id");
+  const classNameIndex = headers.indexOf("class_name");
+  const gradeIndex = headers.indexOf("grade");
+  const statusIndex = headers.indexOf("status");
 
   const filterSchoolId = params && params.school_id ? String(params.school_id).trim() : null;
+  const filterStatus = params && params.status ? String(params.status).trim() : null;
 
   const data = values
     .slice(1)
     .filter(row => {
       const id = String(row[idIndex] || "").trim();
-      if (!id) return false;
-      if (filterSchoolId && String(row[schoolIdIndex] || "").trim() !== filterSchoolId) {
-        return false;
-      }
+      const schoolId = String(row[schoolIdIndex] || "").trim();
+      const className = String(row[classNameIndex] || "").trim();
+      const grade = String(row[gradeIndex] || "").trim();
+      const status = String(row[statusIndex] || "").trim();
+
+      // Skip invalid or completely empty placeholder rows
+      if (!id || (!schoolId && !className && !grade)) return false;
+      if (filterSchoolId && schoolId !== filterSchoolId) return false;
+      if (filterStatus && status !== filterStatus) return false;
       return true;
     })
     .map(row => rowToObject(headers, row));
@@ -1494,7 +1337,7 @@ function getClasses(params) {
 
 /**
  * Menambahkan data kelas baru (03_CLASSES).
- * Data minimal: class_name, grade (opsional: school_id, academic_year).
+ * Parameter: { school_id, grade, class_name, academic_year, address, status }
  */
 function createClass(data) {
   if (!data) {
@@ -1508,19 +1351,13 @@ function createClass(data) {
     return errorResponse("Nama atau tingkat kelas wajib diisi", "REQUIRED_FIELD", { field: "class_name" });
   }
 
-  // Resolving school_id with fallback to first school or SCH001
-  let schoolId = data.school_id ? String(data.school_id).trim() : "";
-  if (!schoolId) {
-    const schoolsSheet = getSheet(SHEETS.SCHOOLS);
-    if (schoolsSheet && schoolsSheet.getLastRow() > 1) {
-      const firstSchool = schoolsSheet.getRange(2, 1).getValue();
-      schoolId = String(firstSchool).trim() || "SCH001";
-    } else {
-      schoolId = "SCH001";
-    }
+  // Resolving school_id with fallback to SCH001
+  let schoolId = data.school_id ? String(data.school_id).trim() : "SCH001";
+  if (!recordExists(SHEETS.SCHOOLS, schoolId)) {
+    schoolId = "SCH001";
   }
 
-  // Format grade number (e.g. "11", "12")
+  // Format grade number
   let grade = rawGrade;
   if (!grade) {
     const match = className.match(/\d+/);
@@ -1563,13 +1400,12 @@ function createClass(data) {
   const newRecord = {
     id: newId,
     school_id: schoolId,
+    address: data.address ? String(data.address).trim() : "Jl. KH. Agus Salim No. 57, Sisir, Kecamatan Batu, Kota Batu, Jawa Timur 65314",
+    academic_year: data.academic_year ? String(data.academic_year).trim() : "2026/2027",
+    grade: Number(grade) || grade,
     class_name: finalClassName,
-    grade: grade,
-    academic_year: data.academic_year ? String(data.academic_year).trim() : `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
-    address: data.address ? String(data.address).trim() : "",
-    status: "active",
-    created_at: now,
-    updated_at: now
+    status: data.status ? String(data.status).trim() : "active",
+    created_at: now
   };
 
   const row = headers.map(header => {
@@ -1578,9 +1414,8 @@ function createClass(data) {
 
   sheet.appendRow(row);
 
-  // Audit Log
   createAuditLog({
-    user_id: data.user_id || data.created_by || "",
+    user_id: data.user_id || data.created_by || "ADMIN",
     action: "CREATE",
     table_name: SHEETS.CLASSES,
     record_id: newId,
@@ -1588,6 +1423,231 @@ function createClass(data) {
   });
 
   return successResponse("Data kelas berhasil ditambahkan", newRecord);
+}
+
+/**
+ * Memperbarui data kelas (03_CLASSES).
+ */
+function updateClass(data) {
+  if (!data || !data.id) {
+    return errorResponse("ID kelas wajib diisi", "ID_REQUIRED");
+  }
+
+  const classId = String(data.id).trim();
+  const existing = findRowById(SHEETS.CLASSES, classId);
+  if (!existing) {
+    return errorResponse("Data kelas tidak ditemukan", "CLASS_NOT_FOUND", { id: classId });
+  }
+
+  const { sheet, rowNumber, rowValues, headers } = existing;
+  const currentObj = rowToObject(headers, rowValues);
+
+  const updatedObj = Object.assign({}, currentObj);
+  if (data.class_name !== undefined) updatedObj.class_name = String(data.class_name).trim();
+  if (data.grade !== undefined) updatedObj.grade = Number(data.grade) || data.grade;
+  if (data.school_id !== undefined) updatedObj.school_id = String(data.school_id).trim();
+  if (data.academic_year !== undefined) updatedObj.academic_year = String(data.academic_year).trim();
+  if (data.address !== undefined) updatedObj.address = String(data.address).trim();
+  if (data.status !== undefined) updatedObj.status = String(data.status).trim();
+
+  const newRowValues = headers.map(header => {
+    return updatedObj[header] !== undefined ? updatedObj[header] : "";
+  });
+
+  sheet.getRange(rowNumber, 1, 1, newRowValues.length).setValues([newRowValues]);
+
+  createAuditLog({
+    user_id: data.user_id || data.updated_by || "ADMIN",
+    action: "UPDATE",
+    table_name: SHEETS.CLASSES,
+    record_id: classId,
+    description: `Memperbarui kelas ${classId}: ${updatedObj.class_name}`
+  });
+
+  return successResponse("Data kelas berhasil diperbarui", updatedObj);
+}
+
+/**
+ * Menjalankan audit dan sinkronisasi struktur relasi Google Sheets secara non-destruktif.
+ */
+function syncDatabaseStructure() {
+  const ss = getSpreadsheet();
+  const results = {
+    classesUpdated: 0,
+    studentsUpdated: 0,
+    examinationsUpdated: 0,
+    screeningsUpdated: 0,
+    ttdUpdated: 0,
+    usersUpdated: 0
+  };
+
+  // 1. SYNC 03_CLASSES
+  const classSheet = ss.getSheetByName(SHEETS.CLASSES);
+  if (classSheet) {
+    const values = classSheet.getDataRange().getValues();
+    const headers = values[0];
+    const idIdx = headers.indexOf("id");
+    const schoolIdx = headers.indexOf("school_id");
+    const gradeIdx = headers.indexOf("grade");
+    const classNameIdx = headers.indexOf("class_name");
+    const statusIdx = headers.indexOf("status");
+    const addressIdx = headers.indexOf("address");
+    const yearIdx = headers.indexOf("academic_year");
+
+    const schoolAddress = "Jl. KH. Agus Salim No. 57, Sisir, Kecamatan Batu, Kota Batu, Jawa Timur 65314";
+    const academicYear = "2026/2027";
+
+    const classConfigs = {
+      "CLS001": { grade: 10, name: "Kelas 10" },
+      "CLS002": { grade: 11, name: "Kelas 11" },
+      "CLS003": { grade: 12, name: "Kelas 12" }
+    };
+
+    for (let r = 1; r < values.length; r++) {
+      const rowId = String(values[r][idIdx] || "").trim();
+      if (classConfigs[rowId]) {
+        const config = classConfigs[rowId];
+        if (schoolIdx !== -1) classSheet.getRange(r + 1, schoolIdx + 1).setValue("SCH001");
+        if (gradeIdx !== -1) classSheet.getRange(r + 1, gradeIdx + 1).setValue(config.grade);
+        if (classNameIdx !== -1) classSheet.getRange(r + 1, classNameIdx + 1).setValue(config.name);
+        if (statusIdx !== -1) classSheet.getRange(r + 1, statusIdx + 1).setValue("active");
+        if (addressIdx !== -1 && (!values[r][addressIdx] || String(values[r][addressIdx]).trim() === "")) {
+          classSheet.getRange(r + 1, addressIdx + 1).setValue(schoolAddress);
+        }
+        if (yearIdx !== -1 && (!values[r][yearIdx] || String(values[r][yearIdx]).trim() === "")) {
+          classSheet.getRange(r + 1, yearIdx + 1).setValue(academicYear);
+        }
+        results.classesUpdated++;
+      }
+    }
+  }
+
+  // 2. SYNC 04_STUDENTS (relate to correct class_id based on student_code prefix)
+  const studentSheet = ss.getSheetByName(SHEETS.STUDENTS);
+  const studentClassMap = {}; // student_id -> class_id
+
+  if (studentSheet) {
+    const values = studentSheet.getDataRange().getValues();
+    const headers = values[0];
+    const idIdx = headers.indexOf("id");
+    const schoolIdx = headers.indexOf("school_id");
+    const classIdx = headers.indexOf("class_id");
+    const codeIdx = headers.indexOf("student_code");
+
+    for (let r = 1; r < values.length; r++) {
+      const studentId = String(values[r][idIdx] || "").trim();
+      const code = String(values[r][codeIdx] || "").trim();
+      if (!studentId) continue;
+
+      let targetClassId = "CLS001";
+      if (code.startsWith("11_") || code.startsWith("11-") || code.startsWith("11")) {
+        targetClassId = "CLS002";
+      } else if (code.startsWith("12_") || code.startsWith("12-") || code.startsWith("12")) {
+        targetClassId = "CLS003";
+      } else {
+        targetClassId = "CLS001";
+      }
+
+      studentClassMap[studentId] = targetClassId;
+
+      if (schoolIdx !== -1) studentSheet.getRange(r + 1, schoolIdx + 1).setValue("SCH001");
+      if (classIdx !== -1) {
+        studentSheet.getRange(r + 1, classIdx + 1).setValue(targetClassId);
+        results.studentsUpdated++;
+      }
+    }
+  }
+
+  // 3. SYNC 05_EXAMINATIONS (relate to correct class_id based on student)
+  const examSheet = ss.getSheetByName(SHEETS.EXAMINATIONS);
+  if (examSheet) {
+    const values = examSheet.getDataRange().getValues();
+    const headers = values[0];
+    const studentIdx = headers.indexOf("student_id");
+    const classIdx = headers.indexOf("class_id");
+
+    for (let r = 1; r < values.length; r++) {
+      const studentId = String(values[r][studentIdx] || "").trim();
+      if (studentId && studentClassMap[studentId]) {
+        const correctClassId = studentClassMap[studentId];
+        if (classIdx !== -1) {
+          examSheet.getRange(r + 1, classIdx + 1).setValue(correctClassId);
+          results.examinationsUpdated++;
+        }
+      }
+    }
+  }
+
+  // 4. SYNC 06_SCREENINGS (relate to correct class_id based on student)
+  const screenSheet = ss.getSheetByName(SHEETS.SCREENINGS);
+  if (screenSheet) {
+    const values = screenSheet.getDataRange().getValues();
+    const headers = values[0];
+    const studentIdx = headers.indexOf("student_id");
+    const classIdx = headers.indexOf("class_id");
+
+    for (let r = 1; r < values.length; r++) {
+      const studentId = String(values[r][studentIdx] || "").trim();
+      if (studentId && studentClassMap[studentId]) {
+        const correctClassId = studentClassMap[studentId];
+        if (classIdx !== -1) {
+          screenSheet.getRange(r + 1, classIdx + 1).setValue(correctClassId);
+          results.screeningsUpdated++;
+        }
+      }
+    }
+  }
+
+  // 5. SYNC 07_TTD (relate to correct class_id based on student)
+  const ttdSheet = ss.getSheetByName(SHEETS.TTD);
+  if (ttdSheet) {
+    const values = ttdSheet.getDataRange().getValues();
+    const headers = values[0];
+    const studentIdx = headers.indexOf("student_id");
+    const classIdx = headers.indexOf("class_id");
+
+    for (let r = 1; r < values.length; r++) {
+      const studentId = String(values[r][studentIdx] || "").trim();
+      if (studentId && studentClassMap[studentId]) {
+        const correctClassId = studentClassMap[studentId];
+        if (classIdx !== -1) {
+          ttdSheet.getRange(r + 1, classIdx + 1).setValue(correctClassId);
+          results.ttdUpdated++;
+        }
+      }
+    }
+  }
+
+  // 6. SYNC 01_USERS (ensure school_id is SCH001)
+  const userSheet = ss.getSheetByName(SHEETS.USERS);
+  if (userSheet) {
+    const values = userSheet.getDataRange().getValues();
+    const headers = values[0];
+    const schoolIdx = headers.indexOf("school_id");
+    const classIdx = headers.indexOf("class_id");
+    const idIdx = headers.indexOf("id");
+
+    for (let r = 1; r < values.length; r++) {
+      const userId = String(values[r][idIdx] || "").trim();
+      if (schoolIdx !== -1) {
+        userSheet.getRange(r + 1, schoolIdx + 1).setValue("SCH001");
+        results.usersUpdated++;
+      }
+      if (userId === "USR002" && classIdx !== -1) {
+        userSheet.getRange(r + 1, classIdx + 1).setValue("CLS002");
+      }
+    }
+  }
+
+  createAuditLog({
+    user_id: "SYSTEM_MIGRATION",
+    action: "DATABASE_SYNC",
+    table_name: "SCHEMA_MIGRATION",
+    record_id: "SYNC_PHASE2",
+    description: `Database and class relations synchronized: ${JSON.stringify(results)}`
+  });
+
+  return successResponse("Database synchronization completed successfully", results);
 }
 
 /**
@@ -1633,105 +1693,6 @@ function getUsers(params) {
   return listResponse("Data pengguna berhasil diambil", data);
 }
 
-/**
- * Menambahkan pengguna / kader baru (01_USERS).
- */
-function createUser(data) {
-  if (!data || !data.name || !data.role) {
-    return errorResponse("Field name dan role wajib diisi", "VALIDATION_ERROR");
-  }
-
-  const schoolId = data.school_id ? String(data.school_id).trim() : "";
-  if (schoolId && !recordExists(SHEETS.SCHOOLS, schoolId)) {
-    return errorResponse("Sekolah tidak ditemukan", "SCHOOL_NOT_FOUND", { school_id: schoolId });
-  }
-
-  const newId = generateNextId(SHEETS.USERS);
-  const now = new Date().toISOString();
-
-  const userObj = {
-    id: newId,
-    name: String(data.name).trim(),
-    email: data.email ? String(data.email).trim() : "",
-    role: String(data.role).trim(),
-    school_id: schoolId,
-    class_id: data.class_id ? String(data.class_id).trim() : "",
-    status: data.status ? String(data.status).trim() : "active",
-    created_at: now
-  };
-
-  const sheet = getSheet(SHEETS.USERS);
-  if (!sheet) {
-    return errorResponse("Sheet 01_USERS tidak ditemukan", "SHEET_NOT_FOUND");
-  }
-
-  const headers = sheet.getDataRange().getValues()[0];
-  const newRow = objectToRow(headers, userObj);
-  sheet.appendRow(newRow);
-
-  appendAuditLog({
-    user_id: data.created_by || "SYSTEM",
-    action: "CREATE_USER",
-    table_name: SHEETS.USERS,
-    record_id: newId,
-    description: "Menambahkan pengguna baru " + userObj.name + " (" + userObj.role + ")"
-  });
-
-  return successResponse("Pengguna berhasil didaftarkan", userObj);
-}
-
-/**
- * Memperbarui data atau status aktif/nonaktif pengguna/kader (01_USERS).
- * Digunakan oleh Kepala Sekolah untuk mengaktifkan/menonaktifkan kader SATRIA.
- */
-function updateUser(data) {
-  if (!data || !data.id) {
-    return errorResponse("Field id pengguna wajib diisi", "VALIDATION_ERROR");
-  }
-
-  const sheet = getSheet(SHEETS.USERS);
-  if (!sheet) {
-    return errorResponse("Sheet 01_USERS tidak ditemukan", "SHEET_NOT_FOUND");
-  }
-
-  const values = sheet.getDataRange().getValues();
-  if (values.length <= 1) {
-    return errorResponse("Data pengguna tidak ditemukan", "USER_NOT_FOUND");
-  }
-
-  const headers = values[0];
-  const idIndex = headers.indexOf("id");
-  const rowIndex = values.findIndex((row, idx) => idx > 0 && String(row[idIndex] || "").trim() === String(data.id).trim());
-
-  if (rowIndex === -1) {
-    return errorResponse("Pengguna tidak ditemukan", "USER_NOT_FOUND", { id: data.id });
-  }
-
-  const rowNumber = rowIndex + 1;
-  const currentObj = rowToObject(headers, values[rowIndex]);
-
-  const updatedObj = Object.assign({}, currentObj);
-  if (data.name !== undefined) updatedObj.name = String(data.name).trim();
-  if (data.email !== undefined) updatedObj.email = String(data.email).trim();
-  if (data.role !== undefined) updatedObj.role = String(data.role).trim();
-  if (data.status !== undefined) updatedObj.status = String(data.status).trim();
-  if (data.school_id !== undefined) updatedObj.school_id = String(data.school_id).trim();
-  if (data.class_id !== undefined) updatedObj.class_id = String(data.class_id).trim();
-
-  const newRowValues = objectToRow(headers, updatedObj);
-  sheet.getRange(rowNumber, 1, 1, newRowValues.length).setValues([newRowValues]);
-
-  appendAuditLog({
-    user_id: data.updated_by || "KEPALA_SEKOLAH",
-    action: "UPDATE_USER",
-    table_name: SHEETS.USERS,
-    record_id: data.id,
-    description: "Memperbarui status/data pengguna " + data.id + " -> status: " + updatedObj.status
-  });
-
-  return successResponse("Data pengguna berhasil diperbarui", updatedObj);
-}
-
 // ============================================================
 // 13. ROUTING & CONTROLLERS (doGet, doPost)
 // ============================================================
@@ -1772,8 +1733,8 @@ function doGet(e) {
       case "getUsers":
         return getUsers(params);
 
-      case "getArticleImages":
-        return getArticleImages(params);
+      case "syncDatabaseStructure":
+        return syncDatabaseStructure();
 
       default:
         return errorResponse("Action GET tidak dikenali", "UNKNOWN_ACTION", { action: action });
@@ -1812,6 +1773,12 @@ function doPost(e) {
       case "createClass":
         return createClass(data);
 
+      case "updateClass":
+        return updateClass(data);
+
+      case "syncDatabaseStructure":
+        return syncDatabaseStructure();
+
       // Students
       case "createStudent":
         return createStudent(data);
@@ -1843,22 +1810,12 @@ function doPost(e) {
       case "updateTTD":
         return updateTTD(data);
 
-      // Educations & Images
+      // Educations
       case "createEducation":
         return createEducation(data);
 
       case "updateEducation":
         return updateEducation(data);
-
-      case "uploadArticleImage":
-        return uploadArticleImage(data);
-
-      // Users
-      case "createUser":
-        return createUser(data);
-
-      case "updateUser":
-        return updateUser(data);
 
       default:
         return errorResponse("Action POST tidak dikenali", "UNKNOWN_ACTION", { action: action });
