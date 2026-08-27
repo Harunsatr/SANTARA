@@ -6,6 +6,7 @@ import {
   GetEducationsParams,
   CreateEducationPayload,
   UpdateEducationPayload,
+  DeleteEducationPayload,
   UploadArticleImagePayload,
   GetArticleImagesParams,
 } from '@/types';
@@ -57,6 +58,15 @@ export async function updateEducation(
     };
   }
   return res;
+}
+
+/**
+ * Menghapus artikel edukasi dari Google Sheets (08_EDUCATIONS)
+ */
+export async function deleteEducation(
+  payload: DeleteEducationPayload
+): Promise<ApiResult<{ id: string; deleted: boolean }>> {
+  return apiPost<{ id: string; deleted: boolean }>('deleteEducation', payload as unknown as Record<string, unknown>);
 }
 
 /**

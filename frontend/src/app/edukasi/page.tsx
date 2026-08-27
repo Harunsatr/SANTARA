@@ -37,6 +37,9 @@ export default function PublicEducationPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedArticle, setSelectedArticle] = useState<EducationArticle | null>(null);
 
+  // Document Viewer State ('book' | 'jakra' | null)
+  const [activeDocument, setActiveDocument] = useState<'book' | 'jakra' | null>(null);
+
   // Interactive Education State
   const [gender, setGender] = useState<'L' | 'P'>('P');
   const [selectedIronSource, setSelectedIronSource] = useState<string>('hati');
@@ -525,43 +528,97 @@ export default function PublicEducationPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3 shrink-0 w-full lg:w-auto">
-          {/* Buku Panduan Google Drive */}
-          <a
-            href="https://drive.google.com/file/d/1mVivcmQnEYXayW2Dr1fcMXk0Erq6TT2t/view?usp=sharing"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full sm:w-auto inline-flex"
+          {/* Buku Panduan Document Button */}
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => setActiveDocument('book')}
+            className="w-full sm:w-auto font-bold bg-emerald-600 hover:bg-emerald-700 shadow-md text-xs sm:text-sm"
+            leftIcon={<BookOpen className="w-4 h-4" />}
+            rightIcon={<ExternalLink className="w-3.5 h-3.5 ml-1 opacity-80" />}
           >
-            <Button
-              variant="primary"
-              size="md"
-              className="w-full sm:w-auto font-bold bg-emerald-600 hover:bg-emerald-700 shadow-md text-xs sm:text-sm"
-              leftIcon={<BookOpen className="w-4 h-4" />}
-              rightIcon={<ExternalLink className="w-3.5 h-3.5 ml-1 opacity-80" />}
-            >
-              Buka Buku Panduan
-            </Button>
-          </a>
+            Buka Buku Panduan
+          </Button>
 
-          {/* Kartu JAKRA Google Drive */}
-          <a
-            href="https://drive.google.com/file/d/18pUXE47Lp1gzSQRWU18PK67D1sIOI4wE/view?usp=sharing"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full sm:w-auto inline-flex"
+          {/* Kartu JAKRA Document Button */}
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() => setActiveDocument('jakra')}
+            className="w-full sm:w-auto font-bold bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs sm:text-sm"
+            leftIcon={<FileText className="w-4 h-4" />}
+            rightIcon={<ExternalLink className="w-3.5 h-3.5 ml-1 opacity-80" />}
           >
-            <Button
-              variant="outline"
-              size="md"
-              className="w-full sm:w-auto font-bold bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs sm:text-sm"
-              leftIcon={<FileText className="w-4 h-4" />}
-              rightIcon={<ExternalLink className="w-3.5 h-3.5 ml-1 opacity-80" />}
-            >
-              Buka Kartu JAKRA
-            </Button>
-          </a>
+            Buka Kartu JAKRA
+          </Button>
         </div>
       </section>
+
+      {/* ========================================================================= */}
+      {/* MODAL: DOCUMENT VIEWER (BUKU PANDUAN & KARTU JAKRA)                       */}
+      {/* ========================================================================= */}
+      {activeDocument && (
+        <Modal
+          isOpen={!!activeDocument}
+          onClose={() => setActiveDocument(null)}
+          title={
+            activeDocument === 'book'
+              ? 'Buku Panduan Terpadu UKS & Program SATRIA'
+              : 'Kartu Jejak Kesehatan Remaja (JAKRA)'
+          }
+          description={
+            activeDocument === 'book'
+              ? 'Pedoman teknis pengukuran antropometri, skrining klinis remaja, dan tata laksana gizi UKS.'
+              : 'Format cetak rekam medis fisik pemantauan antropometri dan kesehatan berkala siswa (Ukuran F4).'
+          }
+          maxWidth="xl"
+        >
+          <div className="flex flex-col gap-4 pt-1">
+            {/* Embedded Google Drive Document Viewer */}
+            <div className="relative w-full h-[65vh] rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-inner">
+              <iframe
+                src={
+                  activeDocument === 'book'
+                    ? 'https://drive.google.com/file/d/1mVivcmQnEYXayW2Dr1fcMXk0Erq6TT2t/preview'
+                    : 'https://drive.google.com/file/d/18pUXE47Lp1gzSQRWU18PK67D1sIOI4wE/preview'
+                }
+                title={
+                  activeDocument === 'book'
+                    ? 'Buku Panduan Terpadu UKS'
+                    : 'Kartu Jejak Kesehatan Remaja JAKRA'
+                }
+                className="w-full h-full border-0"
+                allow="autoplay"
+              />
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+              <a
+                href={
+                  activeDocument === 'book'
+                    ? 'https://drive.google.com/file/d/1mVivcmQnEYXayW2Dr1fcMXk0Erq6TT2t/view?usp=sharing'
+                    : 'https://drive.google.com/file/d/18pUXE47Lp1gzSQRWU18PK67D1sIOI4wE/view?usp=sharing'
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-bold text-sky-700 hover:text-sky-800 hover:underline inline-flex items-center gap-1.5"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Buka di Google Drive Tab Baru</span>
+              </a>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveDocument(null)}
+              >
+                Tutup Dokumen
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* ARTICLE READER MODAL */}
       {selectedArticle && (

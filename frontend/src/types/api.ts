@@ -210,6 +210,11 @@ export interface UpdateEducationPayload {
   user_id?: string;
 }
 
+export interface DeleteEducationPayload {
+  id: string;
+  user_id?: string;
+}
+
 // Article Images (10_PIC_ARTIC)
 export interface UploadArticleImagePayload {
   article_id: string;

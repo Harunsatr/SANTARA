@@ -38,7 +38,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { EducationArticle } from '@/types/models';
-import { fetchEducations, createEducation, updateEducation, uploadArticleImage } from '@/lib/api/educations';
+import { fetchEducations, createEducation, updateEducation, deleteEducation, uploadArticleImage } from '@/lib/api/educations';
 import { formatDateIndo } from '@/lib/utils/date';
 import { useSession } from '@/context/SessionContext';
 import {
@@ -70,6 +70,12 @@ export default function EdukasiKelolaPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<EducationArticle | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<EducationArticle | null>(null);
+
+  // Delete Article Modal states
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [articleToDelete, setArticleToDelete] = useState<EducationArticle | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Program Activities Documentation States
   const [activities, setActivities] = useState<ActivityDetail[]>([]);
@@ -346,6 +352,45 @@ export default function EdukasiKelolaPage() {
       setFormValidation({ general: msg });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // 8b. Delete Article Handlers
+  const handleOpenDeleteModal = (art: EducationArticle) => {
+    setArticleToDelete(art);
+    setDeleteError(null);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!articleToDelete) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const res = await deleteEducation({
+        id: articleToDelete.id,
+        user_id: user?.id || 'USR001',
+      });
+
+      if (res.success) {
+        setToast({
+          message: `Artikel "${articleToDelete.title}" (ID: ${articleToDelete.id}) berhasil dihapus dari Google Sheets.`,
+          type: 'success',
+        });
+        setIsDeleteModalOpen(false);
+        setArticleToDelete(null);
+
+        // Refresh articles from server to guarantee database persistence
+        await handleManualRefresh();
+      } else {
+        setDeleteError(res.message || 'Gagal menghapus artikel dari database.');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan sistem saat menghapus artikel.';
+      setDeleteError(msg);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -810,6 +855,15 @@ export default function EdukasiKelolaPage() {
                             >
                               <FileEdit className="w-3.5 h-3.5 mr-1" />
                               <span>Edit</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenDeleteModal(art)}
+                              className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 mr-1" />
+                              <span>Hapus</span>
                             </Button>
                           </div>
                         </td>
@@ -1517,6 +1571,65 @@ export default function EdukasiKelolaPage() {
                 onClick={() => setViewingPhoto(null)}
               >
                 Tutup
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: KONFIRMASI HAPUS ARTIKEL                                           */}
+      {/* ========================================================================= */}
+      {articleToDelete && (
+        <Modal
+          isOpen={isDeleteModalOpen}
+          onClose={() => !isDeleting && setIsDeleteModalOpen(false)}
+          title="Hapus Artikel Edukasi?"
+          maxWidth="md"
+        >
+          <div className="space-y-4 pt-1">
+            {deleteError && (
+              <Alert variant="error" title="Gagal Menghapus Artikel">
+                {deleteError}
+              </Alert>
+            )}
+
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex flex-col gap-2 text-rose-900">
+              <div className="flex items-center gap-2">
+                <Badge variant="danger" className="text-[10px] uppercase font-bold">
+                  Konfirmasi Penghapusan
+                </Badge>
+                <span className="text-xs font-mono font-bold text-rose-700">
+                  ID: {articleToDelete.id}
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-slate-900 mt-1">
+                {articleToDelete.title}
+              </h4>
+              <p className="text-xs text-rose-700 leading-relaxed">
+                Artikel ini akan dihapus secara permanen dari basis data Google Sheets 08_EDUCATIONS dan tidak akan dapat diakses kembali oleh publik di portal SANTARA.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isDeleting}
+                onClick={() => setIsDeleteModalOpen(false)}
+              >
+                Batal
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                isLoading={isDeleting}
+                onClick={handleConfirmDelete}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
+              >
+                {isDeleting ? 'Menghapus...' : 'Hapus Artikel'}
               </Button>
             </div>
           </div>

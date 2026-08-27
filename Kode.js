@@ -1400,6 +1400,41 @@ function updateEducation(data) {
   return successResponse("Data edukasi berhasil diperbarui", updatedRecord);
 }
 
+/**
+ * Menghapus artikel edukasi (08_EDUCATIONS).
+ * Parameter: { id, user_id }
+ */
+function deleteEducation(data) {
+  if (!data) {
+    return errorResponse("Data wajib diisi", "DATA_REQUIRED");
+  }
+  if (!data.id) {
+    return errorResponse("ID edukasi wajib diisi", "ID_REQUIRED");
+  }
+
+  const eduId = String(data.id).trim();
+  const existing = findRowById(SHEETS.EDUCATIONS, eduId);
+  if (!existing) {
+    return errorResponse("Data edukasi tidak ditemukan", "EDUCATION_NOT_FOUND", { id: eduId });
+  }
+
+  const { sheet, rowNumber, rowValues, headers } = existing;
+  const deletedRecord = rowToObject(headers, rowValues);
+
+  sheet.deleteRow(rowNumber);
+
+  // Audit Log
+  createAuditLog({
+    user_id: data.user_id || "",
+    action: "DELETE",
+    table_name: SHEETS.EDUCATIONS,
+    record_id: eduId,
+    description: `Menghapus artikel edukasi: ${deletedRecord.title || eduId}`
+  });
+
+  return successResponse("Artikel edukasi berhasil dihapus", { id: eduId, deleted: true });
+}
+
 // ============================================================
 // 12. MASTER DATA HANDLERS (SCHOOLS, CLASSES, USERS)
 // ============================================================
@@ -1960,6 +1995,9 @@ function doPost(e) {
 
       case "updateEducation":
         return updateEducation(data);
+
+      case "deleteEducation":
+        return deleteEducation(data);
 
       default:
         return errorResponse("Action POST tidak dikenali", "UNKNOWN_ACTION", { action: action });
