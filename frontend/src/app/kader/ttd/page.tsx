@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import { Student, School, ClassRoom, TTDRecord } from '@/types/models';
 import { fetchTTD, createTTD } from '@/lib/api/ttd';
-import { fetchStudents } from '@/lib/api/students';
+import { fetchStudents, createStudent } from '@/lib/api/students';
 import { fetchSchools } from '@/lib/api/schools';
 import { fetchClasses } from '@/lib/api/classes';
 import { adaptStudentForUI, filterValidClasses, resolveClassName } from '@/lib/adapters/schoolAdapter';
@@ -63,6 +63,15 @@ export default function TtdPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<TTDRecord | null>(null);
+
+  // Dynamic Inline Add Student Modal state
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+  const [newStudentName, setNewStudentName] = useState('');
+  const [newStudentClassId, setNewStudentClassId] = useState('');
+  const [newStudentGender, setNewStudentGender] = useState<'L' | 'P'>('P');
+  const [newStudentBirthDate, setNewStudentBirthDate] = useState('');
+  const [isSubmittingStudent, setIsSubmittingStudent] = useState(false);
+  const [addStudentError, setAddStudentError] = useState<string | null>(null);
 
   // Form states
   const [formStudentId, setFormStudentId] = useState('');
@@ -184,7 +193,95 @@ export default function TtdPage() {
     }
   };
 
-  // 5. Submit Form Handler
+  // 5. Handle Open Inline Add Student Modal
+  const handleOpenInlineAddStudent = (initialName?: string) => {
+    setNewStudentName(initialName || '');
+    setNewStudentClassId(formClassId || classes[0]?.id || '');
+    setNewStudentGender('P');
+    setNewStudentBirthDate('');
+    setAddStudentError(null);
+    setIsAddStudentModalOpen(true);
+  };
+
+  // 6. Handle Submit Inline Student
+  const handleSubmitInlineStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddStudentError(null);
+
+    const cleanName = newStudentName.trim();
+    if (!cleanName) {
+      setAddStudentError('Nama siswi wajib diisi.');
+      return;
+    }
+    if (/^\d+$/.test(cleanName)) {
+      setAddStudentError('Nama siswi harus berupa huruf/teks.');
+      return;
+    }
+    if (/^STD\d+$/i.test(cleanName)) {
+      setAddStudentError('Nama siswi tidak boleh berupa format ID teknis (STDxxx). Gunakan nama lengkap asli.');
+      return;
+    }
+    if (!newStudentClassId) {
+      setAddStudentError('Pilih kelas siswi.');
+      return;
+    }
+
+    setIsSubmittingStudent(true);
+    try {
+      const payload = {
+        school_id: user?.schoolId || user?.school_id || 'SCH001',
+        class_id: newStudentClassId,
+        nama: cleanName,
+        gender: newStudentGender,
+        birth_date: newStudentBirthDate || undefined,
+        user_id: user?.id || 'USR001',
+      };
+
+      const res = await createStudent(payload);
+
+      if (res.success && res.data) {
+        const createdStudent = res.data;
+
+        setStudents(prev => {
+          const exists = prev.some(s => s.id === createdStudent.id);
+          if (exists) return prev;
+          return [createdStudent, ...prev];
+        });
+
+        setFormStudentId(createdStudent.id);
+        setFormClassId(createdStudent.class_id);
+
+        setFormValidation(prev => {
+          const next = { ...prev };
+          delete next.student_id;
+          delete next.class_id;
+          return next;
+        });
+
+        setIsAddStudentModalOpen(false);
+
+        setToast({
+          message: `Siswa "${createdStudent.nama}" (No. ${createdStudent.student_code || createdStudent.id}) berhasil ditambahkan dan otomatis dipilih.`,
+          type: 'success',
+        });
+
+        fetchStudents().then(syncRes => {
+          if (syncRes.success && syncRes.data) {
+            setStudents(syncRes.data);
+          }
+        });
+      } else {
+        setAddStudentError(res.message || 'Gagal menyimpan data siswi ke Google Sheets.');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan sistem saat menyimpan siswi.';
+      setAddStudentError(msg);
+    } finally {
+      setIsSubmittingStudent(false);
+    }
+  };
+
+  // 7. Submit Form Handler
   const handleSubmitTTD = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -631,6 +728,7 @@ export default function TtdPage() {
             error={formValidation.student_id}
             required
             autoFocus
+            onAddNewStudent={handleOpenInlineAddStudent}
           />
 
           <Select
@@ -795,6 +893,117 @@ export default function TtdPage() {
             </div>
           );
         })()}
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: INLINE TAMBAH SISWA BARU (INTEGRATED TO 04_STUDENTS)               */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={isAddStudentModalOpen}
+        onClose={() => {
+          if (!isSubmittingStudent) setIsAddStudentModalOpen(false);
+        }}
+        title="Tambah Siswi Baru"
+        description="Tambahkan data siswi master baru ke Google Sheets 04_STUDENTS."
+        maxWidth="md"
+      >
+        <form onSubmit={handleSubmitInlineStudent} className="space-y-4 pt-2">
+          {addStudentError && (
+            <Alert variant="error" title="Gagal Menambahkan Siswi">
+              {addStudentError}
+            </Alert>
+          )}
+
+          {/* Student Name */}
+          <Input
+            label="Nama Lengkap Siswi"
+            name="nama"
+            placeholder="Contoh: Siti Rahmawati / Aisyah Putri"
+            value={newStudentName}
+            onChange={e => setNewStudentName(e.target.value)}
+            required
+            autoFocus
+            helperText="Masukkan nama lengkap siswi."
+          />
+
+          {/* Class Select (Dynamic from 03_CLASSES) */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs sm:text-sm font-bold text-slate-800">
+              Kelas Siswi <span className="text-rose-500">*</span>
+            </label>
+            <Select
+              name="new_student_class"
+              value={newStudentClassId}
+              onChange={e => setNewStudentClassId(e.target.value)}
+              options={classes.map(c => ({
+                label: resolveClassName(c.id, classes),
+                value: c.id,
+              }))}
+              required
+            />
+          </div>
+
+          {/* Gender Select */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs sm:text-sm font-bold text-slate-800">
+              Jenis Kelamin <span className="text-rose-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setNewStudentGender('P')}
+                className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${
+                  newStudentGender === 'P'
+                    ? 'bg-pink-600 text-white border-pink-600 shadow-xs'
+                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                Perempuan (P)
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewStudentGender('L')}
+                className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${
+                  newStudentGender === 'L'
+                    ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                Laki-laki (L)
+              </button>
+            </div>
+          </div>
+
+          {/* Birth Date (Optional) */}
+          <Input
+            label="Tanggal Lahir (Opsional)"
+            type="date"
+            name="birth_date"
+            value={newStudentBirthDate}
+            onChange={e => setNewStudentBirthDate(e.target.value)}
+          />
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAddStudentModalOpen(false)}
+              disabled={isSubmittingStudent}
+            >
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={isSubmittingStudent}
+              className="bg-sky-600 hover:bg-sky-700 text-white font-bold"
+            >
+              Simpan &amp; Pilih Siswi
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

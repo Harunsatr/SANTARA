@@ -16,7 +16,6 @@ import {
   Activity,
   Stethoscope,
   Pill,
-  Users,
   BookOpen,
   LogOut,
   Menu,

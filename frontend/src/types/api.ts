@@ -86,7 +86,7 @@ export interface GetUsersParams {
 export interface CreateStudentPayload {
   school_id: string;
   class_id: string;
-  student_code: string;
+  student_code?: string;
   nama: string;
   gender: Gender;
   birth_date?: string;

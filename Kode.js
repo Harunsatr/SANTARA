@@ -327,6 +327,86 @@ function getStudents(params) {
 }
 
 /**
+ * Menghasilkan student_code otomatis berikutnya berdasarkan grade/kelas (misal: 10_A, 10_B, 10_C -> 10_D).
+ */
+function generateNextStudentCode(schoolId, classId) {
+  const classRow = findRowById(SHEETS.CLASSES, classId);
+  let grade = "10";
+  if (classRow) {
+    const { rowValues, headers } = classRow;
+    const gradeIdx = headers.indexOf("grade");
+    const nameIdx = headers.indexOf("class_name");
+    if (gradeIdx !== -1 && rowValues[gradeIdx]) {
+      const match = String(rowValues[gradeIdx]).match(/\d+/);
+      if (match) grade = match[0];
+    } else if (nameIdx !== -1 && rowValues[nameIdx]) {
+      const match = String(rowValues[nameIdx]).match(/\d+/);
+      if (match) grade = match[0];
+    }
+  }
+  const prefix = grade + "_";
+
+  const studentSheet = getSheet(SHEETS.STUDENTS);
+  if (!studentSheet) return prefix + "A";
+
+  const values = studentSheet.getDataRange().getValues();
+  if (values.length <= 1) return prefix + "A";
+
+  const headers = values[0];
+  const codeIdx = headers.indexOf("student_code");
+  const schoolIdx = headers.indexOf("school_id");
+  if (codeIdx === -1) return prefix + "A";
+
+  const usedLetters = [];
+  for (let r = 1; r < values.length; r++) {
+    const rowSchool = schoolIdx !== -1 ? String(values[r][schoolIdx] || "").trim() : "";
+    if (schoolId && rowSchool && rowSchool !== schoolId) continue;
+
+    const code = String(values[r][codeIdx] || "").trim().toUpperCase();
+    if (code.startsWith(prefix.toUpperCase())) {
+      const suffix = code.substring(prefix.length).trim();
+      if (suffix) {
+        usedLetters.push(suffix);
+      }
+    }
+  }
+
+  function letterToIndex(str) {
+    let idx = 0;
+    for (let i = 0; i < str.length; i++) {
+      const charCode = str.charCodeAt(i);
+      if (charCode >= 65 && charCode <= 90) {
+        idx = idx * 26 + (charCode - 64);
+      }
+    }
+    return idx - 1;
+  }
+
+  function indexToLetter(idx) {
+    let letter = "";
+    while (idx >= 0) {
+      letter = String.fromCharCode((idx % 26) + 65) + letter;
+      idx = Math.floor(idx / 26) - 1;
+    }
+    return letter;
+  }
+
+  let maxIdx = -1;
+  for (const suffix of usedLetters) {
+    if (/^[A-Z]+$/.test(suffix)) {
+      const idx = letterToIndex(suffix);
+      if (idx > maxIdx) maxIdx = idx;
+    } else if (/^\d+$/.test(suffix)) {
+      const num = parseInt(suffix, 10);
+      if (num > maxIdx + 1) maxIdx = num - 1;
+    }
+  }
+
+  const nextLetter = indexToLetter(maxIdx + 1);
+  return prefix + nextLetter;
+}
+
+/**
  * Menambahkan data siswa baru.
  */
 function createStudent(data) {
@@ -334,18 +414,17 @@ function createStudent(data) {
     return errorResponse("Data siswa wajib diisi", "DATA_REQUIRED");
   }
 
-  const requiredFields = ["school_id", "class_id", "student_code", "nama", "gender"];
-  for (const field of requiredFields) {
-    if (data[field] === undefined || data[field] === null || String(data[field]).trim() === "") {
-      return errorResponse(`Field ${field} wajib diisi`, "REQUIRED_FIELD", { field: field });
-    }
-  }
+  const nama = String(data.nama || "").trim();
+  const classId = String(data.class_id || "").trim();
+  const schoolId = String(data.school_id || "SCH001").trim();
+  const gender = String(data.gender || "L").trim().toUpperCase();
 
-  const schoolId = String(data.school_id).trim();
-  const classId = String(data.class_id).trim();
-  const studentCode = String(data.student_code).trim();
-  const nama = String(data.nama).trim();
-  const gender = String(data.gender).trim().toUpperCase();
+  if (!nama) {
+    return errorResponse("Nama siswa wajib diisi", "REQUIRED_FIELD", { field: "nama" });
+  }
+  if (!classId) {
+    return errorResponse("Kelas siswa wajib diisi", "REQUIRED_FIELD", { field: "class_id" });
+  }
 
   // Validasi Foreign Keys
   if (!recordExists(SHEETS.SCHOOLS, schoolId)) {
@@ -362,19 +441,57 @@ function createStudent(data) {
 
   const values = sheet.getDataRange().getValues();
   const headers = values[0];
+  const idIndex = headers.indexOf("id");
   const schoolIdIndex = headers.indexOf("school_id");
   const classIdIndex = headers.indexOf("class_id");
   const studentCodeIndex = headers.indexOf("student_code");
+  const namaIndex = headers.indexOf("nama");
+  const birthDateIndex = headers.indexOf("birth_date");
 
-  // Cegah duplikasi student_code pada sekolah dan kelas yang sama
-  const isDuplicate = values.slice(1).some(row => {
-    return String(row[schoolIdIndex] || "").trim() === schoolId &&
-           String(row[classIdIndex] || "").trim() === classId &&
-           String(row[studentCodeIndex] || "").trim() === studentCode;
+  // Duplicate Check: Check if active student with exact same nama and class_id exists
+  const rawBirth = data.birth_date ? String(data.birth_date).trim() : "";
+  const existingRow = values.slice(1).find(row => {
+    const rSchool = schoolIdIndex !== -1 ? String(row[schoolIdIndex] || "").trim() : "";
+    const rClass = classIdIndex !== -1 ? String(row[classIdIndex] || "").trim() : "";
+    const rNama = namaIndex !== -1 ? String(row[namaIndex] || "").trim().toLowerCase() : "";
+    const rBirth = birthDateIndex !== -1 ? String(row[birthDateIndex] || "").trim() : "";
+
+    const schoolMatch = !schoolId || !rSchool || rSchool === schoolId;
+    const classMatch = rClass === classId;
+    const nameMatch = rNama === nama.toLowerCase();
+
+    if (schoolMatch && classMatch && nameMatch) {
+      if (rawBirth && rBirth) {
+        return rBirth === rawBirth;
+      }
+      return true;
+    }
+    return false;
   });
 
-  if (isDuplicate) {
-    return errorResponse("Student code sudah digunakan pada kelas tersebut", "DUPLICATE_STUDENT_CODE");
+  if (existingRow) {
+    const existingObj = rowToObject(headers, existingRow);
+    return errorResponse(
+      `Siswa "${nama}" sudah terdaftar di kelas ini dengan nomor ${existingObj.student_code || existingObj.id}.`,
+      "DUPLICATE_STUDENT",
+      existingObj
+    );
+  }
+
+  // Generate student_code otomatis jika belum ada atau terjadi konflik
+  let studentCode = data.student_code ? String(data.student_code).trim() : "";
+  if (!studentCode) {
+    studentCode = generateNextStudentCode(schoolId, classId);
+  } else {
+    // Cek apakah code sudah digunakan
+    const isCodeUsed = values.slice(1).some(row => {
+      return String(row[schoolIdIndex] || "").trim() === schoolId &&
+             String(row[classIdIndex] || "").trim() === classId &&
+             String(row[studentCodeIndex] || "").trim() === studentCode;
+    });
+    if (isCodeUsed) {
+      studentCode = generateNextStudentCode(schoolId, classId);
+    }
   }
 
   const newId = generateNextId(SHEETS.STUDENTS, ID_PREFIXES[SHEETS.STUDENTS]);
@@ -386,8 +503,8 @@ function createStudent(data) {
     class_id: classId,
     student_code: studentCode,
     nama: nama,
-    gender: gender,
-    birth_date: data.birth_date ? String(data.birth_date).trim() : "",
+    gender: gender === "P" ? "P" : "L",
+    birth_date: rawBirth,
     status: data.status ? String(data.status).trim() : "active",
     created_at: now,
     updated_at: now
@@ -405,7 +522,7 @@ function createStudent(data) {
     action: "CREATE",
     table_name: SHEETS.STUDENTS,
     record_id: newId,
-    description: `Menambahkan siswa baru: ${nama} (${studentCode})`
+    description: `Menambahkan siswa baru: ${nama} (${studentCode}) di kelas ${classId}`
   });
 
   return successResponse("Data siswa berhasil ditambahkan", newRecord);

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Student, ClassRoom } from '@/types/models';
 import { resolveClassName } from '@/lib/adapters/schoolAdapter';
-import { Search, UserCheck, X, ChevronDown, Check, User } from 'lucide-react';
+import { Search, UserCheck, X, ChevronDown, Check, User, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface StudentAutocompleteProps {
@@ -18,6 +18,7 @@ export interface StudentAutocompleteProps {
   disabled?: boolean;
   helperText?: string;
   autoFocus?: boolean;
+  onAddNewStudent?: (searchTerm: string) => void;
 }
 
 export function StudentAutocomplete({
@@ -32,6 +33,7 @@ export function StudentAutocomplete({
   disabled = false,
   helperText,
   autoFocus = false,
+  onAddNewStudent,
 }: StudentAutocompleteProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -236,15 +238,28 @@ export function StudentAutocomplete({
           {isOpen && (
             <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white border border-slate-200 rounded-xl shadow-xl max-h-64 overflow-y-auto divide-y divide-slate-100 animate-in fade-in-50 zoom-in-95 duration-100">
               {filteredStudents.length === 0 ? (
-                <div className="p-4 text-center">
+                <div className="p-4 text-center flex flex-col items-center gap-2">
                   <p className="text-xs sm:text-sm font-semibold text-slate-700">
                     Siswa tidak ditemukan
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-400">
                     {debouncedSearch
                       ? `Tidak ada siswa yang cocok dengan "${debouncedSearch}".`
                       : 'Belum ada data siswa terdaftar.'}
                   </p>
+                  {onAddNewStudent && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onAddNewStudent(searchTerm);
+                      }}
+                      className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 transition-colors shadow-2xs cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Tambah Siswa Baru</span>
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="py-1">
@@ -293,6 +308,22 @@ export function StudentAutocomplete({
                       </button>
                     );
                   })}
+
+                  {onAddNewStudent && searchTerm.trim().length > 0 && (
+                    <div className="p-2 border-t border-slate-100 bg-slate-50/60">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsOpen(false);
+                          onAddNewStudent(searchTerm);
+                        }}
+                        className="w-full py-1.5 px-2.5 text-left text-xs font-bold text-sky-700 hover:bg-sky-100/60 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>+ Tambah Siswa Baru (&ldquo;{searchTerm}&rdquo;)</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
