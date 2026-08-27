@@ -7,6 +7,7 @@ import {
   UpdateStudentPayload,
   ArchiveStudentPayload,
 } from '@/types';
+import { normalizeStudents, normalizeStudent } from '@/lib/normalizers/dataNormalizer';
 
 /**
  * Mengambil daftar data siswa (04_STUDENTS)
@@ -14,7 +15,14 @@ import {
 export async function fetchStudents(
   params: GetStudentsParams = {}
 ): Promise<ApiResult<Student[]>> {
-  return apiGet<Student[]>('getStudents', params as Record<string, string | number | boolean | undefined>);
+  const res = await apiGet<Student[]>('getStudents', params as Record<string, string | number | boolean | undefined>);
+  if (res.success && res.data) {
+    return {
+      ...res,
+      data: normalizeStudents(res.data),
+    };
+  }
+  return res;
 }
 
 /**
@@ -23,7 +31,14 @@ export async function fetchStudents(
 export async function createStudent(
   payload: CreateStudentPayload
 ): Promise<ApiResult<Student>> {
-  return apiPost<Student>('createStudent', payload as unknown as Record<string, unknown>);
+  const res = await apiPost<Student>('createStudent', payload as unknown as Record<string, unknown>);
+  if (res.success && res.data) {
+    return {
+      ...res,
+      data: normalizeStudent(res.data),
+    };
+  }
+  return res;
 }
 
 /**
@@ -32,7 +47,14 @@ export async function createStudent(
 export async function updateStudent(
   payload: UpdateStudentPayload
 ): Promise<ApiResult<Student>> {
-  return apiPost<Student>('updateStudent', payload as unknown as Record<string, unknown>);
+  const res = await apiPost<Student>('updateStudent', payload as unknown as Record<string, unknown>);
+  if (res.success && res.data) {
+    return {
+      ...res,
+      data: normalizeStudent(res.data),
+    };
+  }
+  return res;
 }
 
 /**

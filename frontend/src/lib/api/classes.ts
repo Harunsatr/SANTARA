@@ -1,5 +1,6 @@
 import { apiGet, apiPost } from './client';
 import { ClassRoom, ApiResult, GetClassesParams } from '@/types';
+import { normalizeClasses, normalizeClassRoom } from '@/lib/normalizers/dataNormalizer';
 
 /**
  * Mengambil master data kelas (03_CLASSES)
@@ -7,7 +8,14 @@ import { ClassRoom, ApiResult, GetClassesParams } from '@/types';
 export async function fetchClasses(
   params: GetClassesParams = {}
 ): Promise<ApiResult<ClassRoom[]>> {
-  return apiGet<ClassRoom[]>('getClasses', params as Record<string, string | number | boolean | undefined>);
+  const res = await apiGet<ClassRoom[]>('getClasses', params as Record<string, string | number | boolean | undefined>);
+  if (res.success && res.data) {
+    return {
+      ...res,
+      data: normalizeClasses(res.data),
+    };
+  }
+  return res;
 }
 
 /**
@@ -16,5 +24,12 @@ export async function fetchClasses(
 export async function createClass(
   data: Partial<ClassRoom> & { class_name: string; grade: string | number; school_id?: string }
 ): Promise<ApiResult<ClassRoom>> {
-  return apiPost<ClassRoom>('createClass', data);
+  const res = await apiPost<ClassRoom>('createClass', data);
+  if (res.success && res.data) {
+    return {
+      ...res,
+      data: normalizeClassRoom(res.data),
+    };
+  }
+  return res;
 }

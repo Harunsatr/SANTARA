@@ -9,6 +9,7 @@ import {
   UploadArticleImagePayload,
   GetArticleImagesParams,
 } from '@/types';
+import { normalizeEducationArticles, normalizeEducationArticle } from '@/lib/normalizers/dataNormalizer';
 
 /**
  * Mengambil artikel dan materi edukasi kesehatan (08_EDUCATIONS)
@@ -16,7 +17,14 @@ import {
 export async function fetchEducations(
   params: GetEducationsParams = {}
 ): Promise<ApiResult<EducationArticle[]>> {
-  return apiGet<EducationArticle[]>('getEducations', params as Record<string, string | number | boolean | undefined>);
+  const res = await apiGet<EducationArticle[]>('getEducations', params as Record<string, string | number | boolean | undefined>);
+  if (res.success && res.data) {
+    return {
+      ...res,
+      data: normalizeEducationArticles(res.data),
+    };
+  }
+  return res;
 }
 
 /**
@@ -25,7 +33,14 @@ export async function fetchEducations(
 export async function createEducation(
   payload: CreateEducationPayload
 ): Promise<ApiResult<EducationArticle>> {
-  return apiPost<EducationArticle>('createEducation', payload as unknown as Record<string, unknown>);
+  const res = await apiPost<EducationArticle>('createEducation', payload as unknown as Record<string, unknown>);
+  if (res.success && res.data) {
+    return {
+      ...res,
+      data: normalizeEducationArticle(res.data),
+    };
+  }
+  return res;
 }
 
 /**
@@ -34,7 +49,14 @@ export async function createEducation(
 export async function updateEducation(
   payload: UpdateEducationPayload
 ): Promise<ApiResult<EducationArticle>> {
-  return apiPost<EducationArticle>('updateEducation', payload as unknown as Record<string, unknown>);
+  const res = await apiPost<EducationArticle>('updateEducation', payload as unknown as Record<string, unknown>);
+  if (res.success && res.data) {
+    return {
+      ...res,
+      data: normalizeEducationArticle(res.data),
+    };
+  }
+  return res;
 }
 
 /**

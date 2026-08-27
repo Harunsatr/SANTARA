@@ -13,7 +13,7 @@ import {
   Input,
 } from '@/components/ui';
 import { fetchExaminations, fetchClasses, fetchTTD, createClass } from '@/lib/api';
-import { filterValidClasses } from '@/lib/adapters';
+import { filterValidClasses, normalizeString, normalizeBoolean } from '@/lib/adapters';
 import { normalizeNutritionStatus, NUTRITION_STYLES, NutritionCategoryStyle } from '@/lib/utils/nutrition';
 import { calculatePercentage } from '@/lib/utils/number';
 import { useSession } from '@/context/SessionContext';
@@ -160,10 +160,15 @@ export default function ProtectedGrafikPage() {
           const detectedGrades = new Set<string>(['10', '11', '12']); // Guarantee standard 10, 11, 12
 
           validClasses.forEach(c => {
-            if (c.id) {
-              const gr = String(c.grade || '').trim() || (c.class_name.match(/\d+/)?.[0] || '10');
-              classGradeMap.set(c.id, gr);
-              classNameMap.set(c.id, c.class_name || `Kelas ${gr}`);
+            const classId = normalizeString(c?.id);
+            if (classId) {
+              const rawClassName = normalizeString(c.class_name);
+              const rawGrade = normalizeString(c.grade);
+              const gr = rawGrade || (/(\d+)/.exec(rawClassName)?.[1] || '10');
+              const finalName = rawClassName || `Kelas ${gr}`;
+
+              classGradeMap.set(classId, gr);
+              classNameMap.set(classId, finalName);
               detectedGrades.add(gr);
             }
           });
@@ -181,8 +186,10 @@ export default function ProtectedGrafikPage() {
           });
 
           exams.forEach(exam => {
+            if (!exam) return;
             const status = normalizeNutritionStatus(exam.nutrional_status);
-            const grade = classGradeMap.get(exam.class_id || '') || '10';
+            const examClassId = normalizeString(exam.class_id);
+            const grade = classGradeMap.get(examClassId) || '10';
 
             overallCounts.total++;
             if (!byGrade[grade]) {
@@ -238,16 +245,21 @@ export default function ProtectedGrafikPage() {
           // 2. Compute Pure Non-Personal Aggregated TTD Data per Class
           const ttdByClass: Record<string, { totalLogged: number; consumedCount: number }> = {};
           validClasses.forEach(c => {
-            ttdByClass[c.id] = { totalLogged: 0, consumedCount: 0 };
+            const classId = normalizeString(c.id);
+            if (classId) {
+              ttdByClass[classId] = { totalLogged: 0, consumedCount: 0 };
+            }
           });
 
           let totalConsumed = 0;
           ttdRecords.forEach(rec => {
-            const isConsumed = rec.consumed === true || rec.consumed === 'TRUE' || rec.consumed === 'true' || Number(rec.consumed) === 1;
-            if (rec.class_id && ttdByClass[rec.class_id]) {
-              ttdByClass[rec.class_id].totalLogged++;
+            if (!rec) return;
+            const isConsumed = normalizeBoolean(rec.consumed, false);
+            const recClassId = normalizeString(rec.class_id);
+            if (recClassId && ttdByClass[recClassId]) {
+              ttdByClass[recClassId].totalLogged++;
               if (isConsumed) {
-                ttdByClass[rec.class_id].consumedCount++;
+                ttdByClass[recClassId].consumedCount++;
               }
             }
             if (isConsumed) {
@@ -256,11 +268,14 @@ export default function ProtectedGrafikPage() {
           });
 
           const classAggregatesList: ClassTTDAggregate[] = validClasses.map(c => {
-            const data = ttdByClass[c.id] || { totalLogged: 0, consumedCount: 0 };
+            const classId = normalizeString(c.id);
+            const data = ttdByClass[classId] || { totalLogged: 0, consumedCount: 0 };
+            const gr = normalizeString(c.grade) || (/(\d+)/.exec(normalizeString(c.class_name))?.[1] || '10');
+            const name = normalizeString(c.class_name) || `Kelas ${gr}`;
             return {
-              classId: c.id,
-              className: c.class_name || `Kelas ${c.grade}`,
-              grade: String(c.grade || '10'),
+              classId,
+              className: name,
+              grade: gr,
               totalLogged: data.totalLogged,
               consumedCount: data.consumedCount,
               complianceRate: calculatePercentage(data.consumedCount, data.totalLogged),
@@ -306,7 +321,7 @@ export default function ProtectedGrafikPage() {
 
     // Duplicate check on client
     const isDup = allClasses.some(
-      c => c.class_name.toLowerCase() === finalName.toLowerCase()
+      c => normalizeString(c.class_name).toLowerCase() === finalName.toLowerCase()
     );
     if (isDup) {
       setAddClassError(`Kelas "${finalName}" sudah terdaftar di database 03_CLASSES.`);

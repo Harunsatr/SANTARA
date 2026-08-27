@@ -36,7 +36,7 @@ import { fetchStudents, createStudent } from '@/lib/api/students';
 import { fetchSchools } from '@/lib/api/schools';
 import { fetchClasses, createClass } from '@/lib/api/classes';
 import { adaptExaminationsFromApi, serializeExaminationNotes } from '@/lib/adapters/examinationAdapter';
-import { adaptStudentForUI, filterValidClasses, resolveClassName } from '@/lib/adapters/schoolAdapter';
+import { adaptStudentForUI, filterValidClasses, resolveClassName, normalizeString } from '@/lib/adapters';
 import { getNutritionStyle } from '@/lib/utils/nutrition';
 import { formatDateIndo, getTodayDateString } from '@/lib/utils/date';
 import { calculateBMI } from '@/lib/utils/number';
@@ -315,7 +315,7 @@ export default function StatusGiziPage() {
 
     // Duplicate check on client
     const isDup = classes.some(
-      c => c.class_name.toLowerCase() === finalName.toLowerCase()
+      c => normalizeString(c.class_name).toLowerCase() === finalName.toLowerCase()
     );
     if (isDup) {
       setAddClassError(`Kelas "${finalName}" sudah terdaftar di database 03_CLASSES.`);

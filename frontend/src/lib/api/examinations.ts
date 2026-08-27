@@ -6,6 +6,7 @@ import {
   CreateExaminationPayload,
   UpdateExaminationPayload,
 } from '@/types';
+import { normalizeExaminations, normalizeExamination } from '@/lib/normalizers/dataNormalizer';
 
 /**
  * Mengambil data pemeriksaan antropometri gizi (05_EXAMINATIONS)
@@ -13,7 +14,14 @@ import {
 export async function fetchExaminations(
   params: GetExaminationsParams = {}
 ): Promise<ApiResult<Examination[]>> {
-  return apiGet<Examination[]>('getExaminations', params as Record<string, string | number | boolean | undefined>);
+  const res = await apiGet<Examination[]>('getExaminations', params as Record<string, string | number | boolean | undefined>);
+  if (res.success && res.data) {
+    return {
+      ...res,
+      data: normalizeExaminations(res.data),
+    };
+  }
+  return res;
 }
 
 /**
@@ -22,7 +30,14 @@ export async function fetchExaminations(
 export async function createExamination(
   payload: CreateExaminationPayload
 ): Promise<ApiResult<Examination>> {
-  return apiPost<Examination>('createExamination', payload as unknown as Record<string, unknown>);
+  const res = await apiPost<Examination>('createExamination', payload as unknown as Record<string, unknown>);
+  if (res.success && res.data) {
+    return {
+      ...res,
+      data: normalizeExamination(res.data),
+    };
+  }
+  return res;
 }
 
 /**
@@ -31,5 +46,12 @@ export async function createExamination(
 export async function updateExamination(
   payload: UpdateExaminationPayload
 ): Promise<ApiResult<Examination>> {
-  return apiPost<Examination>('updateExamination', payload as unknown as Record<string, unknown>);
+  const res = await apiPost<Examination>('updateExamination', payload as unknown as Record<string, unknown>);
+  if (res.success && res.data) {
+    return {
+      ...res,
+      data: normalizeExamination(res.data),
+    };
+  }
+  return res;
 }

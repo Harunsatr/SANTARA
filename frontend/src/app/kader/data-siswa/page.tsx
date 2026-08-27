@@ -35,7 +35,7 @@ import { Student, School, ClassRoom, StudentWithAge } from '@/types/models';
 import { fetchStudents, createStudent } from '@/lib/api/students';
 import { fetchSchools } from '@/lib/api/schools';
 import { fetchClasses } from '@/lib/api/classes';
-import { adaptStudentForUI, filterValidClasses } from '@/lib/adapters/schoolAdapter';
+import { adaptStudentForUI, filterValidClasses, resolveClassName } from '@/lib/adapters/schoolAdapter';
 import { formatDateIndo } from '@/lib/utils/date';
 import { useSession } from '@/context/SessionContext';
 
@@ -519,7 +519,7 @@ export default function DataSiswaPage() {
               <option value="ALL">Semua Kelas</option>
               {classes.map(c => (
                 <option key={c.id} value={c.id}>
-                  {c.grade ? `Kelas ${c.grade} ${c.class_name}` : c.class_name || c.id}
+                  {resolveClassName(c.id, classes)}
                 </option>
               ))}
             </select>
@@ -745,7 +745,7 @@ export default function DataSiswaPage() {
               value={formData.class_id}
               onChange={e => handleInputChange('class_id', e.target.value)}
               options={classes.map(c => ({
-                label: c.grade ? `Kelas ${c.grade} ${c.class_name}` : c.class_name || c.id,
+                label: resolveClassName(c.id, classes),
                 value: c.id,
               }))}
               error={formValidation.class_id}

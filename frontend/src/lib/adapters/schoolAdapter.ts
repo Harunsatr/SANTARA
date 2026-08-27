@@ -5,28 +5,31 @@
  */
 
 import { School, ClassRoom, Student, StudentWithAge } from '@/types/models';
+import { normalizeString, normalizeClassRoom } from '@/lib/normalizers/dataNormalizer';
 
 /**
  * Resolves student name safely from student ID and student list/map.
  * Fallback for unlisted IDs: "Data Siswa Tidak Ditemukan".
  */
 export function resolveStudentName(
-  studentId?: string,
+  studentId?: unknown,
   students: Student[] | Map<string, Student> = []
 ): string {
-  if (!studentId || studentId.trim() === '') {
+  const cleanId = normalizeString(studentId);
+  if (!cleanId) {
     return 'Data Siswa Tidak Ditemukan';
   }
 
   let found: Student | undefined;
   if (students instanceof Map) {
-    found = students.get(studentId.trim());
+    found = students.get(cleanId);
   } else if (Array.isArray(students)) {
-    found = students.find(s => s.id === studentId.trim());
+    found = students.find(s => normalizeString(s?.id) === cleanId);
   }
 
-  if (found && found.nama && found.nama.trim() !== '') {
-    return found.nama;
+  if (found && found.nama) {
+    const cleanNama = normalizeString(found.nama);
+    if (cleanNama) return cleanNama;
   }
 
   return 'Data Siswa Tidak Ditemukan';
@@ -36,15 +39,16 @@ export function resolveStudentName(
  * Resolves full student record safely.
  */
 export function resolveStudent(
-  studentId?: string,
+  studentId?: unknown,
   students: Student[] | Map<string, Student> = []
 ): Student | undefined {
-  if (!studentId || studentId.trim() === '') return undefined;
+  const cleanId = normalizeString(studentId);
+  if (!cleanId) return undefined;
 
   if (students instanceof Map) {
-    return students.get(studentId.trim());
+    return students.get(cleanId);
   } else if (Array.isArray(students)) {
-    return students.find(s => s.id === studentId.trim());
+    return students.find(s => normalizeString(s?.id) === cleanId);
   }
 
   return undefined;
@@ -54,43 +58,55 @@ export function resolveStudent(
  * Resolves school name safely from school ID and school list.
  * Fallback for unlisted IDs: "Sekolah {id} (Belum Terdaftar)".
  */
-export function resolveSchoolName(schoolId?: string, schools: School[] = []): string {
-  if (!schoolId || schoolId.trim() === '') {
+export function resolveSchoolName(schoolId?: unknown, schools: School[] = []): string {
+  const cleanId = normalizeString(schoolId);
+  if (!cleanId) {
     return 'Sekolah Tidak Terdaftar';
   }
 
-  const found = schools.find(s => s.id === schoolId.trim());
-  if (found && found.name) {
-    return found.name;
+  if (Array.isArray(schools)) {
+    const found = schools.find(s => normalizeString(s?.id) === cleanId);
+    if (found && found.name) {
+      const cleanName = normalizeString(found.name);
+      if (cleanName) return cleanName;
+    }
   }
 
-  return `Sekolah ${schoolId} (Belum Terdaftar)`;
+  return `Sekolah ${cleanId} (Belum Terdaftar)`;
 }
 
 /**
  * Resolves class name safely from class ID and class list.
  */
-export function resolveClassName(classId?: string, classes: ClassRoom[] = []): string {
-  if (!classId || classId.trim() === '') {
+export function resolveClassName(classId?: unknown, classes: ClassRoom[] = []): string {
+  const cleanId = normalizeString(classId);
+  if (!cleanId) {
     return 'Kelas Tidak Terdaftar';
   }
 
-  const found = classes.find(c => c.id === classId.trim());
-  if (found) {
-    if (found.class_name && found.class_name.trim() !== '') {
-      const name = found.class_name.trim();
-      if (name.toLowerCase().startsWith('kelas')) {
-        return name;
+  if (Array.isArray(classes)) {
+    const found = classes.find(c => normalizeString(c?.id) === cleanId);
+    if (found) {
+      const rawClassName = normalizeString(found.class_name);
+      const rawGrade = normalizeString(found.grade);
+
+      if (rawClassName) {
+        if (rawClassName.toLowerCase().startsWith('kelas')) {
+          return rawClassName;
+        }
+        if (/^\d+$/.test(rawClassName)) {
+          return `Kelas ${rawClassName}`;
+        }
+        const gradePrefix = rawGrade ? `Kelas ${rawGrade} ` : 'Kelas ';
+        return `${gradePrefix}${rawClassName}`;
       }
-      const gradePrefix = found.grade ? `Kelas ${found.grade} ` : 'Kelas ';
-      return `${gradePrefix}${name}`;
-    }
-    if (found.grade) {
-      return `Kelas ${found.grade}`;
+      if (rawGrade) {
+        return `Kelas ${rawGrade}`;
+      }
     }
   }
 
-  return `Kelas ${classId}`;
+  return `Kelas ${cleanId}`;
 }
 
 /**
@@ -98,26 +114,30 @@ export function resolveClassName(classId?: string, classes: ClassRoom[] = []): s
  * CRITICAL: This is only a presentation layer filter; no records are deleted from backend.
  */
 export function filterValidClasses(classes: ClassRoom[] = []): ClassRoom[] {
-  return classes.filter(
-    c => c.id && ((c.class_name && c.class_name.trim() !== '') || (c.grade && String(c.grade).trim() !== ''))
-  );
+  if (!Array.isArray(classes)) return [];
+  return classes
+    .map(c => normalizeClassRoom(c))
+    .filter(c => c.id !== '' && (c.class_name !== '' || c.grade !== ''));
 }
 
 /**
  * Calculates student age from birth date string.
  */
-export function calculateAge(birthDateStr?: string, targetDateStr?: string): {
+export function calculateAge(birthDateStr?: unknown, targetDateStr?: unknown): {
   years?: number;
   months?: number;
   formatted: string;
 } {
-  if (!birthDateStr || birthDateStr.trim() === '') {
+  const cleanBirth = normalizeString(birthDateStr);
+  const cleanTarget = normalizeString(targetDateStr);
+
+  if (!cleanBirth) {
     return { formatted: '-' };
   }
 
   try {
-    const birth = new Date(birthDateStr);
-    const target = targetDateStr ? new Date(targetDateStr) : new Date();
+    const birth = new Date(cleanBirth);
+    const target = cleanTarget ? new Date(cleanTarget) : new Date();
 
     if (isNaN(birth.getTime()) || isNaN(target.getTime())) {
       return { formatted: '-' };
