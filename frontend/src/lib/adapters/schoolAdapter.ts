@@ -76,21 +76,30 @@ export function resolveClassName(classId?: string, classes: ClassRoom[] = []): s
   }
 
   const found = classes.find(c => c.id === classId.trim());
-  if (found && found.class_name) {
-    const gradePrefix = found.grade ? `Kelas ${found.grade} ` : 'Kelas ';
-    return `${gradePrefix}${found.class_name}`;
+  if (found) {
+    if (found.class_name && found.class_name.trim() !== '') {
+      const name = found.class_name.trim();
+      if (name.toLowerCase().startsWith('kelas')) {
+        return name;
+      }
+      const gradePrefix = found.grade ? `Kelas ${found.grade} ` : 'Kelas ';
+      return `${gradePrefix}${name}`;
+    }
+    if (found.grade) {
+      return `Kelas ${found.grade}`;
+    }
   }
 
   return `Kelas ${classId}`;
 }
 
 /**
- * Filters out template placeholder classes that do not have a class_name yet.
+ * Filters out template placeholder classes that do not have a class_name or grade yet.
  * CRITICAL: This is only a presentation layer filter; no records are deleted from backend.
  */
 export function filterValidClasses(classes: ClassRoom[] = []): ClassRoom[] {
   return classes.filter(
-    c => c.id && c.class_name && c.class_name.trim() !== ''
+    c => c.id && ((c.class_name && c.class_name.trim() !== '') || (c.grade && String(c.grade).trim() !== ''))
   );
 }
 

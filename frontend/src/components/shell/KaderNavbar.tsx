@@ -42,7 +42,6 @@ export function KaderNavbar() {
     { href: '/kader/status-gizi', label: 'Status Gizi', icon: <Activity className="w-4 h-4" /> },
     { href: '/kader/skrining', label: 'Skrining', icon: <Stethoscope className="w-4 h-4" /> },
     { href: '/kader/ttd', label: 'TTD', icon: <Pill className="w-4 h-4" /> },
-    { href: '/kader/data-siswa', label: 'Data Siswa', icon: <Users className="w-4 h-4" /> },
     { href: '/kader/edukasi-kelola', label: 'Artikel Umum', icon: <BookOpen className="w-4 h-4" /> },
   ];
 

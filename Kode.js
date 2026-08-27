@@ -584,12 +584,21 @@ function createExamination(data) {
   const classId = String(data.class_id).trim();
   const examinerId = data.examiner_id ? String(data.examiner_id).trim() : "";
 
-  // Validasi Foreign Keys
-  if (!recordExists(SHEETS.STUDENTS, studentId)) {
+  // Validasi Foreign Keys & Authoritative Class Resolution
+  const studentRow = findRowById(SHEETS.STUDENTS, studentId);
+  if (!studentRow) {
     return errorResponse("Siswa tidak ditemukan", "STUDENT_NOT_FOUND", { student_id: studentId });
   }
-  if (!recordExists(SHEETS.CLASSES, classId)) {
-    return errorResponse("Kelas tidak ditemukan", "CLASS_NOT_FOUND", { class_id: classId });
+  const studentObj = rowToObject(studentRow.headers, studentRow.rowValues);
+
+  // Authoritative class resolution: Prioritaskan class_id terdaftar pada profil siswa
+  let effectiveClassId = classId;
+  if (studentObj.class_id && String(studentObj.class_id).trim() !== "" && recordExists(SHEETS.CLASSES, String(studentObj.class_id).trim())) {
+    effectiveClassId = String(studentObj.class_id).trim();
+  }
+
+  if (!recordExists(SHEETS.CLASSES, effectiveClassId)) {
+    return errorResponse("Kelas tidak ditemukan", "CLASS_NOT_FOUND", { class_id: effectiveClassId });
   }
   if (examinerId && !recordExists(SHEETS.USERS, examinerId)) {
     return errorResponse("Pemeriksa (User) tidak ditemukan", "USER_NOT_FOUND", { examiner_id: examinerId });
@@ -627,7 +636,7 @@ function createExamination(data) {
   const newRecord = {
     id: newId,
     student_id: studentId,
-    class_id: classId,
+    class_id: effectiveClassId,
     examination_date: data.examination_date,
     weight_kg: weight,
     height_cm: heightCm,
@@ -795,12 +804,21 @@ function createScreening(data) {
   const classId = String(data.class_id).trim();
   const examinerId = data.examiner_id ? String(data.examiner_id).trim() : "";
 
-  // Validasi Foreign Keys
-  if (!recordExists(SHEETS.STUDENTS, studentId)) {
+  // Validasi Foreign Keys & Authoritative Class Resolution
+  const studentRow = findRowById(SHEETS.STUDENTS, studentId);
+  if (!studentRow) {
     return errorResponse("Siswa tidak ditemukan", "STUDENT_NOT_FOUND", { student_id: studentId });
   }
-  if (!recordExists(SHEETS.CLASSES, classId)) {
-    return errorResponse("Kelas tidak ditemukan", "CLASS_NOT_FOUND", { class_id: classId });
+  const studentObj = rowToObject(studentRow.headers, studentRow.rowValues);
+
+  // Authoritative class resolution: Prioritaskan class_id terdaftar pada profil siswa
+  let effectiveClassId = classId;
+  if (studentObj.class_id && String(studentObj.class_id).trim() !== "" && recordExists(SHEETS.CLASSES, String(studentObj.class_id).trim())) {
+    effectiveClassId = String(studentObj.class_id).trim();
+  }
+
+  if (!recordExists(SHEETS.CLASSES, effectiveClassId)) {
+    return errorResponse("Kelas tidak ditemukan", "CLASS_NOT_FOUND", { class_id: effectiveClassId });
   }
   if (examinerId && !recordExists(SHEETS.USERS, examinerId)) {
     return errorResponse("Pemeriksa (User) tidak ditemukan", "USER_NOT_FOUND", { examiner_id: examinerId });
@@ -819,7 +837,7 @@ function createScreening(data) {
   const newRecord = {
     id: newId,
     student_id: studentId,
-    class_id: classId,
+    class_id: effectiveClassId,
     screening_date: data.screening_date,
     screening_type: String(data.screening_type).trim(),
     result: String(data.result).trim(),
@@ -969,12 +987,21 @@ function createTTD(data) {
   const classId = String(data.class_id).trim();
   const recordedBy = data.recorded_by ? String(data.recorded_by).trim() : "";
 
-  // Validasi Foreign Keys
-  if (!recordExists(SHEETS.STUDENTS, studentId)) {
+  // Validasi Foreign Keys & Authoritative Class Resolution
+  const studentRow = findRowById(SHEETS.STUDENTS, studentId);
+  if (!studentRow) {
     return errorResponse("Siswa tidak ditemukan", "STUDENT_NOT_FOUND", { student_id: studentId });
   }
-  if (!recordExists(SHEETS.CLASSES, classId)) {
-    return errorResponse("Kelas tidak ditemukan", "CLASS_NOT_FOUND", { class_id: classId });
+  const studentObj = rowToObject(studentRow.headers, studentRow.rowValues);
+
+  // Authoritative class resolution: Prioritaskan class_id terdaftar pada profil siswa
+  let effectiveClassId = classId;
+  if (studentObj.class_id && String(studentObj.class_id).trim() !== "" && recordExists(SHEETS.CLASSES, String(studentObj.class_id).trim())) {
+    effectiveClassId = String(studentObj.class_id).trim();
+  }
+
+  if (!recordExists(SHEETS.CLASSES, effectiveClassId)) {
+    return errorResponse("Kelas tidak ditemukan", "CLASS_NOT_FOUND", { class_id: effectiveClassId });
   }
   if (recordedBy && !recordExists(SHEETS.USERS, recordedBy)) {
     return errorResponse("Pencatat (User) tidak ditemukan", "USER_NOT_FOUND", { recorded_by: recordedBy });
@@ -997,7 +1024,7 @@ function createTTD(data) {
   const newRecord = {
     id: newId,
     student_id: studentId,
-    class_id: classId,
+    class_id: effectiveClassId,
     consumption_date: data.consumption_date,
     consumed: data.consumed,
     quantity: quantity,

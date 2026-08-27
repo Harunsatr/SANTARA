@@ -16,6 +16,7 @@ import {
   Toast,
   LoadingState,
   EmptyState,
+  StudentAutocomplete,
 } from '@/components/ui';
 import {
   Stethoscope,
@@ -36,7 +37,7 @@ import { fetchStudents } from '@/lib/api/students';
 import { fetchSchools } from '@/lib/api/schools';
 import { fetchClasses } from '@/lib/api/classes';
 import { formatHbResult, formatBloodPressureResult } from '@/lib/adapters/screeningAdapter';
-import { adaptStudentForUI, filterValidClasses } from '@/lib/adapters/schoolAdapter';
+import { adaptStudentForUI, filterValidClasses, resolveClassName } from '@/lib/adapters/schoolAdapter';
 import { formatDateIndo, getTodayDateString } from '@/lib/utils/date';
 import { useSession } from '@/context/SessionContext';
 
@@ -153,12 +154,8 @@ export default function SkriningPage() {
 
   // 3. Open Modal Handler with Reset
   const handleOpenAddModal = () => {
-    const defaultStudent = students.find(s => s.status === 'active') || students[0];
-    const defaultStudentId = defaultStudent ? defaultStudent.id : '';
-    const defaultClassId = defaultStudent ? defaultStudent.class_id : (classes[0]?.id || 'CLS001');
-
-    setFormStudentId(defaultStudentId);
-    setFormClassId(defaultClassId);
+    setFormStudentId('');
+    setFormClassId('');
     setFormDate(getTodayDateString());
     setFormType('Anemia');
     setFormHbValue('');
@@ -169,12 +166,25 @@ export default function SkriningPage() {
     setIsAddModalOpen(true);
   };
 
-  // 4. Handle Student Selection in Form (Auto-adjust class)
-  const handleStudentSelectChange = (studentId: string) => {
-    setFormStudentId(studentId);
-    const selected = students.find(s => s.id === studentId);
-    if (selected && selected.class_id) {
-      setFormClassId(selected.class_id);
+  // 4. Handle Student Selection via Autocomplete (Auto-adjust class)
+  const handleStudentSelect = (student: Student | null) => {
+    if (student) {
+      setFormStudentId(student.id);
+      if (student.class_id) {
+        setFormClassId(student.class_id);
+      } else if (classes.length > 0) {
+        setFormClassId(classes[0].id);
+      }
+      if (formValidation.student_id) {
+        setFormValidation(prev => {
+          const next = { ...prev };
+          delete next.student_id;
+          return next;
+        });
+      }
+    } else {
+      setFormStudentId('');
+      setFormClassId('');
     }
   };
 
@@ -476,7 +486,7 @@ export default function SkriningPage() {
               <option value="ALL">Semua Kelas</option>
               {classes.map(c => (
                 <option key={c.id} value={c.id}>
-                  {c.grade ? `Kelas ${c.grade} ${c.class_name}` : c.class_name || c.id}
+                  {resolveClassName(c.id, classes)}
                 </option>
               ))}
             </select>
@@ -653,34 +663,30 @@ export default function SkriningPage() {
             </Alert>
           )}
 
-          {/* Student & Class Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select
-              label="Pilih Siswa"
-              name="student_id"
-              value={formStudentId}
-              onChange={e => handleStudentSelectChange(e.target.value)}
-              options={students.map(s => ({
-                label: `${s.nama} (No: ${s.student_code} - ${s.gender === 'P' ? 'P' : 'L'})`,
-                value: s.id,
-              }))}
-              error={formValidation.student_id}
-              required
-            />
+          {/* Searchable Autocomplete for Student */}
+          <StudentAutocomplete
+            label="Nama Siswa"
+            value={formStudentId}
+            onChange={handleStudentSelect}
+            students={students}
+            classes={classes}
+            error={formValidation.student_id}
+            required
+            autoFocus
+          />
 
-            <Select
-              label="Kelas"
-              name="class_id"
-              value={formClassId}
-              onChange={e => setFormClassId(e.target.value)}
-              options={classes.map(c => ({
-                label: c.grade ? `Kelas ${c.grade} ${c.class_name}` : c.class_name || c.id,
-                value: c.id,
-              }))}
-              error={formValidation.class_id}
-              required
-            />
-          </div>
+          <Select
+            label="Kelas Siswa"
+            name="class_id"
+            value={formClassId}
+            onChange={e => setFormClassId(e.target.value)}
+            options={classes.map(c => ({
+              label: resolveClassName(c.id, classes),
+              value: c.id,
+            }))}
+            error={formValidation.class_id}
+            required
+          />
 
           {/* Date & Type Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

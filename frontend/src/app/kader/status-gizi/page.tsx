@@ -15,6 +15,7 @@ import {
   Toast,
   LoadingState,
   EmptyState,
+  StudentAutocomplete,
 } from '@/components/ui';
 import {
   Activity,
@@ -30,14 +31,17 @@ import {
   Scale,
   Ruler,
   FileText,
+  PlusCircle,
+  X,
+  UserCheck,
 } from 'lucide-react';
 import { Student, School, ClassRoom, ExaminationWithLiLA } from '@/types/models';
 import { fetchExaminations, createExamination } from '@/lib/api/examinations';
 import { fetchStudents } from '@/lib/api/students';
 import { fetchSchools } from '@/lib/api/schools';
-import { fetchClasses } from '@/lib/api/classes';
+import { fetchClasses, createClass } from '@/lib/api/classes';
 import { adaptExaminationsFromApi, serializeExaminationNotes } from '@/lib/adapters/examinationAdapter';
-import { adaptStudentForUI, filterValidClasses } from '@/lib/adapters/schoolAdapter';
+import { adaptStudentForUI, filterValidClasses, resolveClassName } from '@/lib/adapters/schoolAdapter';
 import { getNutritionStyle } from '@/lib/utils/nutrition';
 import { formatDateIndo, getTodayDateString } from '@/lib/utils/date';
 import { calculateBMI } from '@/lib/utils/number';
@@ -65,6 +69,13 @@ export default function StatusGiziPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedExam, setSelectedExam] = useState<ExaminationWithLiLA | null>(null);
+
+  // Dynamic Add Class Modal state
+  const [isAddClassModalOpen, setIsAddClassModalOpen] = useState(false);
+  const [newClassName, setNewClassName] = useState('');
+  const [newGrade, setNewGrade] = useState('10');
+  const [isSubmittingClass, setIsSubmittingClass] = useState(false);
+  const [addClassError, setAddClassError] = useState<string | null>(null);
 
   // Form states
   const [formStudentId, setFormStudentId] = useState('');
@@ -155,12 +166,8 @@ export default function StatusGiziPage() {
 
   // 3. Open Modal Handler with Reset
   const handleOpenAddModal = () => {
-    const defaultStudent = students.find(s => s.status === 'active') || students[0];
-    const defaultStudentId = defaultStudent ? defaultStudent.id : '';
-    const defaultClassId = defaultStudent ? defaultStudent.class_id : (classes[0]?.id || 'CLS001');
-
-    setFormStudentId(defaultStudentId);
-    setFormClassId(defaultClassId);
+    setFormStudentId('');
+    setFormClassId('');
     setFormExamDate(getTodayDateString());
     setFormHeight('');
     setFormWeight('');
@@ -170,16 +177,90 @@ export default function StatusGiziPage() {
     setIsAddModalOpen(true);
   };
 
-  // 4. Handle Student Selection in Form (Auto-adjust class)
-  const handleStudentSelectChange = (studentId: string) => {
-    setFormStudentId(studentId);
-    const selected = students.find(s => s.id === studentId);
-    if (selected && selected.class_id) {
-      setFormClassId(selected.class_id);
+  // 4. Handle Student Selection via Autocomplete (Auto-fills class)
+  const handleStudentSelect = (student: Student | null) => {
+    if (student) {
+      setFormStudentId(student.id);
+      if (student.class_id) {
+        setFormClassId(student.class_id);
+      } else if (classes.length > 0) {
+        setFormClassId(classes[0].id);
+      }
+      // Clear student_id validation error if present
+      if (formValidation.student_id) {
+        setFormValidation(prev => {
+          const next = { ...prev };
+          delete next.student_id;
+          return next;
+        });
+      }
+    } else {
+      setFormStudentId('');
+      setFormClassId('');
     }
   };
 
-  // 5. Live BMI & Status Calculation
+  // 5. Handle Add New Class Dynamically
+  const handleCreateNewClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddClassError(null);
+
+    const name = newClassName.trim();
+    const gr = newGrade.trim();
+
+    if (!name && !gr) {
+      setAddClassError('Nama kelas atau tingkat wajib diisi');
+      return;
+    }
+
+    const finalName = name || `Kelas ${gr}`;
+
+    // Duplicate check on client
+    const isDup = classes.some(
+      c => c.class_name.toLowerCase() === finalName.toLowerCase()
+    );
+    if (isDup) {
+      setAddClassError(`Kelas "${finalName}" sudah terdaftar di database 03_CLASSES.`);
+      return;
+    }
+
+    setIsSubmittingClass(true);
+    try {
+      const res = await createClass({
+        class_name: finalName,
+        grade: gr,
+        academic_year: '2026/2027',
+        school_id: user?.schoolId || 'SCH001',
+      });
+
+      if (res.success && res.data) {
+        setToast({
+          message: `Kelas "${finalName}" berhasil ditambahkan ke database Google Sheets.`,
+          type: 'success',
+        });
+        setNewClassName('');
+        setIsAddClassModalOpen(false);
+
+        // Refresh classes and select the new class
+        const refreshedClasses = await fetchClasses();
+        if (refreshedClasses.success) {
+          const valid = filterValidClasses(refreshedClasses.data || []);
+          setClasses(valid);
+          if (res.data.id) {
+            setFormClassId(res.data.id);
+          }
+        }
+      } else {
+        setAddClassError(res.message || 'Gagal menambahkan kelas baru');
+      }
+    } catch (err) {
+      setAddClassError(err instanceof Error ? err.message : 'Terjadi kesalahan saat membuat kelas');
+    } finally {
+      setIsSubmittingClass(false);
+    }
+  };
+
+  // 6. Live BMI & Status Calculation
   const liveBmiResult = useMemo(() => {
     const h = parseFloat(formHeight);
     const w = parseFloat(formWeight);
@@ -202,14 +283,14 @@ export default function StatusGiziPage() {
     };
   }, [formHeight, formWeight]);
 
-  // 6. Submit Form Handler
+  // 7. Submit Form Handler
   const handleSubmitExamination = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const errors: { [key: string]: string } = {};
 
-    if (!formStudentId) errors.student_id = 'Pilih siswa yang diperiksa.';
-    if (!formClassId) errors.class_id = 'Pilih kelas.';
+    if (!formStudentId) errors.student_id = 'Pilih siswa melalui pencarian nama.';
+    if (!formClassId) errors.class_id = 'Pilih kelas siswa.';
     if (!formExamDate) errors.examination_date = 'Pilih tanggal pemeriksaan.';
 
     const h = parseFloat(formHeight);
@@ -276,7 +357,7 @@ export default function StatusGiziPage() {
     }
   };
 
-  // 7. Student Lookup Map for Table Rendering
+  // 8. Student Lookup Map for Table Rendering
   const studentMap = useMemo(() => {
     const map = new Map<string, ReturnType<typeof adaptStudentForUI>>();
     students.forEach(s => {
@@ -285,7 +366,7 @@ export default function StatusGiziPage() {
     return map;
   }, [students, schools, classes]);
 
-  // 8. Filtered Examinations List
+  // 9. Filtered Examinations List
   const filteredExaminations = useMemo(() => {
     return examinations.filter(ex => {
       const st = studentMap.get(ex.student_id);
@@ -311,7 +392,7 @@ export default function StatusGiziPage() {
     });
   }, [examinations, studentMap, searchQuery, filterClass, filterStatusGizi]);
 
-  // 9. Metric Summaries
+  // 10. Metric Summaries
   const stats = useMemo(() => {
     const total = examinations.length;
     const todayStr = getTodayDateString();
@@ -369,12 +450,12 @@ export default function StatusGiziPage() {
             <span>{isRefreshing ? 'Menyinkronkan...' : 'Refresh Data'}</span>
           </Button>
 
-          {/* Add Exam Button */}
+          {/* Add Exam Button (Primary Entry Point) */}
           <Button
             variant="primary"
             size="sm"
             onClick={handleOpenAddModal}
-            className="flex items-center gap-2 shadow-sm"
+            className="flex items-center gap-2 shadow-sm font-bold bg-sky-600 hover:bg-sky-700 text-white"
           >
             <Plus className="w-4 h-4" />
             <span>Tambah Pemeriksaan</span>
@@ -460,7 +541,7 @@ export default function StatusGiziPage() {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Cari nama siswa, nomor/kode siswa, atau ID pemeriksaan..."
+              placeholder="Cari nama siswa atau kelas..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
@@ -477,7 +558,7 @@ export default function StatusGiziPage() {
               <option value="ALL">Semua Kelas</option>
               {classes.map(c => (
                 <option key={c.id} value={c.id}>
-                  {c.grade ? `Kelas ${c.grade} ${c.class_name}` : c.class_name || c.id}
+                  {resolveClassName(c.id, classes)}
                 </option>
               ))}
             </select>
@@ -563,30 +644,31 @@ export default function StatusGiziPage() {
                           setIsDetailModalOpen(true);
                         }}
                       >
-                        {/* Date & ID */}
+                        {/* Date */}
                         <td className="py-3.5 px-4 text-xs">
                           <div className="font-semibold text-slate-900 flex items-center gap-1.5">
                             <Calendar className="w-3.5 h-3.5 text-slate-400" />
                             <span>{formatDateIndo(ex.examination_date)}</span>
                           </div>
-                          <div className="text-[10px] font-mono text-slate-400 mt-0.5">{ex.id}</div>
                         </td>
 
-                        {/* Student Name & Code */}
+                        {/* Student Name */}
                         <td className="py-3.5 px-4">
                           <div className="font-bold text-slate-900 group-hover:text-sky-700 transition-colors">
-                            {student?.nama || 'Data Siswa Tidak Ditemukan'}
+                            {student?.nama || 'Data Siswa'}
                           </div>
-                          <div className="text-xs text-slate-400 font-mono">
-                            No. {student?.student_code || '-'}
-                          </div>
+                          {student?.student_code && (
+                            <div className="text-xs text-slate-400 font-mono">
+                              No. {student.student_code}
+                            </div>
+                          )}
                         </td>
 
                         {/* Class */}
                         <td className="py-3.5 px-4 text-xs text-slate-600">
                           <div className="flex items-center gap-1">
                             <GraduationCap className="w-3.5 h-3.5 text-slate-400" />
-                            <span>{student?.class_name || ex.class_id}</span>
+                            <span>{resolveClassName(ex.class_id, classes)}</span>
                           </div>
                         </td>
 
@@ -645,7 +727,7 @@ export default function StatusGiziPage() {
       </Card>
 
       {/* ========================================================================= */}
-      {/* MODAL: TAMBAH PEMERIKSAAN ANTROPOMETRI (MODAL DIALOG)                     */}
+      {/* MODAL: TAMBAH PEMERIKSAAN ANTROPOMETRI (PRIMARY ENTRY POINT)              */}
       {/* ========================================================================= */}
       <Modal
         isOpen={isAddModalOpen}
@@ -653,7 +735,7 @@ export default function StatusGiziPage() {
           if (!isSubmitting) setIsAddModalOpen(false);
         }}
         title="Entri Pemeriksaan Status Gizi"
-        description="Pencatatan pengukuran antropometri tinggi badan, berat badan, LiLA, dan kalkulasi IMT otomatis."
+        description="Ketik nama siswa untuk pencarian instan, kelas akan terisi otomatis."
         maxWidth="lg"
       >
         <form onSubmit={handleSubmitExamination} className="space-y-4 pt-2">
@@ -663,28 +745,40 @@ export default function StatusGiziPage() {
             </Alert>
           )}
 
-          {/* Student & Class Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select
-              label="Pilih Siswa"
-              name="student_id"
-              value={formStudentId}
-              onChange={e => handleStudentSelectChange(e.target.value)}
-              options={students.map(s => ({
-                label: `${s.nama} (No: ${s.student_code} - ${s.gender === 'P' ? 'P' : 'L'})`,
-                value: s.id,
-              }))}
-              error={formValidation.student_id}
-              required
-            />
+          {/* Searchable Autocomplete for Student */}
+          <StudentAutocomplete
+            label="Nama Siswa"
+            value={formStudentId}
+            onChange={handleStudentSelect}
+            students={students}
+            classes={classes}
+            error={formValidation.student_id}
+            required
+            autoFocus
+          />
+
+          {/* Class Field with Dynamic Auto-fill & Add Class Option */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs sm:text-sm font-bold text-slate-800">
+                Kelas Siswa <span className="text-rose-500">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsAddClassModalOpen(true)}
+                className="text-[11px] font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1 hover:underline"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>+ Tambah Kelas Baru</span>
+              </button>
+            </div>
 
             <Select
-              label="Kelas"
               name="class_id"
               value={formClassId}
               onChange={e => setFormClassId(e.target.value)}
               options={classes.map(c => ({
-                label: c.grade ? `Kelas ${c.grade} ${c.class_name}` : c.class_name || c.id,
+                label: resolveClassName(c.id, classes),
                 value: c.id,
               }))}
               error={formValidation.class_id}
@@ -753,36 +847,33 @@ export default function StatusGiziPage() {
               </div>
             </div>
           ) : (
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-500 text-center">
-              Masukkan Tinggi Badan dan Berat Badan untuk melihat perhitungan IMT otomatis.
+            <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-500 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-sky-500 shrink-0" />
+              <span>Masukkan tinggi dan berat badan untuk melihat estimasi IMT dan klasifikasi status gizi Standar WHO.</span>
             </div>
           )}
 
-          {/* Additional Notes */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Catatan Tambahan</label>
+          {/* Custom Notes */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs sm:text-sm font-semibold text-slate-700">
+              Catatan Khusus / Keluhan (Opsional)
+            </label>
             <textarea
+              name="custom_notes"
               rows={2}
-              placeholder="Catatan kondisi fisik atau rekomendasi kader..."
+              placeholder="Contoh: Riwayat sering pusing, sedang diet, atau anjuran makan..."
               value={formCustomNotes}
               onChange={e => setFormCustomNotes(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
+              className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
           </div>
 
-          {/* Notice Box */}
-          <div className="p-3 bg-sky-50 border border-sky-100 rounded-lg text-xs text-sky-800 flex items-start gap-2.5">
-            <Sparkles className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-semibold">Adapter LiLA:</span> Data Lingkar Lengan Atas (LiLA) diserialisasi secara otomatis ke catatan pemeriksaan berstandar backend tanpa mengubah skema spreadsheet.
-            </div>
-          </div>
-
-          {/* Actions */}
+          {/* Form Action Buttons */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={() => setIsAddModalOpen(false)}
               disabled={isSubmitting}
             >
@@ -791,86 +882,183 @@ export default function StatusGiziPage() {
             <Button
               type="submit"
               variant="primary"
-              disabled={isSubmitting}
-              className="flex items-center gap-2"
+              size="sm"
+              isLoading={isSubmitting}
+              className="bg-sky-600 hover:bg-sky-700 text-white font-bold"
             >
-              {isSubmitting ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Menyimpan ke Spreadsheet...</span>
-                </>
-              ) : (
-                <span>Simpan Pemeriksaan</span>
-              )}
+              Simpan Pemeriksaan
             </Button>
           </div>
         </form>
       </Modal>
 
       {/* ========================================================================= */}
-      {/* MODAL: DETAIL PEMERIKSAAN (MODAL DIALOG)                                  */}
+      {/* MODAL: TAMBAH KELAS BARU DINAMIS (DYNAMIC CLASS SUPPORT)                  */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
-        title="Detail Pemeriksaan Status Gizi"
-        description="Informasi rinci pengukuran antropometri dan status gizi siswa."
+        isOpen={isAddClassModalOpen}
+        onClose={() => {
+          if (!isSubmittingClass) setIsAddClassModalOpen(false);
+        }}
+        title="Tambah Kelas Baru"
+        description="Tambahkan kelas master baru ke 03_CLASSES Google Sheets."
         maxWidth="md"
       >
-        {selectedExam && (() => {
-          const student = studentMap.get(selectedExam.student_id);
-          const style = getNutritionStyle(selectedExam.nutrional_status);
+        <form onSubmit={handleCreateNewClass} className="space-y-4 pt-2">
+          {addClassError && (
+            <Alert variant="error" title="Gagal Menambahkan Kelas">
+              {addClassError}
+            </Alert>
+          )}
 
-          return (
-            <div className="space-y-4 pt-2">
-              {/* Header Status Card */}
-              <div className="p-4 rounded-xl border flex items-center justify-between" style={{ backgroundColor: style.bgColor, borderColor: style.borderColor }}>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">ID: {selectedExam.id}</span>
-                  <h3 className="text-lg font-bold text-slate-900">{student?.nama || 'Data Siswa Tidak Ditemukan'}</h3>
-                  <p className="text-xs text-slate-600 mt-0.5">Tanggal: {formatDateIndo(selectedExam.examination_date)}</p>
-                </div>
-                <span className={`px-3 py-1.5 rounded-full text-xs font-bold border ${style.badgeClass}`}>
-                  {style.label}
-                </span>
-              </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs sm:text-sm font-bold text-slate-800">
+              Tingkat Kelas (Grade) <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={newGrade}
+              onChange={e => setNewGrade(e.target.value)}
+              className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
+            >
+              <option value="10">Kelas 10</option>
+              <option value="11">Kelas 11</option>
+              <option value="12">Kelas 12</option>
+              <option value="13">Kelas 13 (SMK 4 Tahun / Khusus)</option>
+            </select>
+          </div>
 
-              {/* Measurements Grid */}
-              <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                <div>
-                  <p className="text-slate-400 font-medium flex items-center gap-1"><Ruler className="w-3.5 h-3.5" /> Tinggi Badan</p>
-                  <p className="text-base font-bold text-slate-800 mt-0.5">{selectedExam.height_cm} cm</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 font-medium flex items-center gap-1"><Scale className="w-3.5 h-3.5" /> Berat Badan</p>
-                  <p className="text-base font-bold text-slate-800 mt-0.5">{selectedExam.weight_kg} kg</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 font-medium flex items-center gap-1"><Activity className="w-3.5 h-3.5" /> Indeks Massa Tubuh (IMT)</p>
-                  <p className="text-base font-bold text-slate-800 mt-0.5">{Number(selectedExam.bmi).toFixed(2)} kg/m²</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 font-medium flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Lingkar Lengan Atas (LiLA)</p>
-                  <p className="text-base font-bold text-slate-800 mt-0.5">{selectedExam.lila_cm ? `${selectedExam.lila_cm} cm` : '-'}</p>
-                </div>
-              </div>
+          <Input
+            label="Nama Kelas / Rombel"
+            name="class_name"
+            placeholder="Contoh: Kelas 10, X-A, XI IPA 1"
+            value={newClassName}
+            onChange={e => setNewClassName(e.target.value)}
+            helperText="Kosongkan untuk menggunakan nama default (misal: Kelas 10)."
+          />
 
-              {/* Notes */}
-              <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs">
-                <p className="text-slate-400 font-medium flex items-center gap-1 mb-1"><FileText className="w-3.5 h-3.5" /> Catatan Pemeriksaan</p>
-                <p className="text-slate-700 leading-relaxed">{selectedExam.clean_notes || 'Tidak ada catatan tambahan.'}</p>
-              </div>
-
-              {/* Close Button */}
-              <div className="flex justify-end pt-2">
-                <Button variant="outline" size="sm" onClick={() => setIsDetailModalOpen(false)}>
-                  Tutup
-                </Button>
-              </div>
-            </div>
-          );
-        })()}
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAddClassModalOpen(false)}
+              disabled={isSubmittingClass}
+            >
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={isSubmittingClass}
+              className="bg-sky-600 hover:bg-sky-700 text-white font-bold"
+            >
+              Simpan Kelas
+            </Button>
+          </div>
+        </form>
       </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: DETAIL PEMERIKSAAN                                                 */}
+      {/* ========================================================================= */}
+      {selectedExam && (
+        <Modal
+          isOpen={isDetailModalOpen}
+          onClose={() => setIsDetailModalOpen(false)}
+          title="Detail Pemeriksaan Status Gizi"
+          maxWidth="md"
+        >
+          {(() => {
+            const student = studentMap.get(selectedExam.student_id);
+            const style = getNutritionStyle(selectedExam.nutrional_status);
+
+            return (
+              <div className="space-y-4 pt-1">
+                {/* Student Info Card */}
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">
+                        {student?.nama || 'Data Siswa'}
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {resolveClassName(selectedExam.class_id, classes)} • {student?.gender === 'P' ? 'Perempuan' : 'Laki-laki'}
+                      </p>
+                    </div>
+                    {student?.student_code && (
+                      <span className="text-xs font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-700">
+                        No. {student.student_code}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Measurements Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                    <p className="text-[11px] text-slate-400 font-semibold uppercase">Tinggi Badan</p>
+                    <p className="text-lg font-bold text-slate-900 mt-0.5">{selectedExam.height_cm} cm</p>
+                  </div>
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                    <p className="text-[11px] text-slate-400 font-semibold uppercase">Berat Badan</p>
+                    <p className="text-lg font-bold text-slate-900 mt-0.5">{selectedExam.weight_kg} kg</p>
+                  </div>
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                    <p className="text-[11px] text-slate-400 font-semibold uppercase">Indeks Massa Tubuh (IMT)</p>
+                    <p className="text-lg font-black text-sky-700 mt-0.5">{Number(selectedExam.bmi).toFixed(1)}</p>
+                  </div>
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                    <p className="text-[11px] text-slate-400 font-semibold uppercase">Lingkar Lengan (LiLA)</p>
+                    <p className="text-lg font-bold text-slate-900 mt-0.5">{selectedExam.lila_cm ? `${selectedExam.lila_cm} cm` : '-'}</p>
+                  </div>
+                </div>
+
+                {/* Status Gizi Banner */}
+                <div
+                  className="p-4 rounded-xl border flex items-center justify-between"
+                  style={{ backgroundColor: style.bgColor, borderColor: style.borderColor }}
+                >
+                  <div>
+                    <p className="text-xs font-semibold" style={{ color: style.textColor }}>
+                      Klasifikasi Status Gizi (Standar WHO):
+                    </p>
+                    <p className="text-base font-black mt-0.5" style={{ color: style.textColor }}>
+                      {style.label}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Date & Notes */}
+                <div className="text-xs text-slate-600 space-y-1.5 pt-2 border-t border-slate-100">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Tanggal Pemeriksaan:</span>
+                    <span className="font-semibold text-slate-800">{formatDateIndo(selectedExam.examination_date)}</span>
+                  </div>
+                  {selectedExam.notes && (
+                    <div className="flex flex-col gap-1 pt-1">
+                      <span className="text-slate-400">Catatan:</span>
+                      <p className="p-2 bg-slate-50 rounded-lg text-slate-700 italic border border-slate-200">
+                        &quot;{selectedExam.notes}&quot;
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsDetailModalOpen(false)}
+                  >
+                    Tutup
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </Modal>
+      )}
     </div>
   );
 }

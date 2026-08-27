@@ -43,6 +43,7 @@ import {
   RefreshCw,
   PlusCircle,
   CheckCircle2,
+  BarChart3,
 } from 'lucide-react';
 
 export default function KaderDashboardPage() {
@@ -351,12 +352,12 @@ export default function KaderDashboardPage() {
                   </Link>
 
                   <Link
-                    href="/kader/data-siswa"
-                    className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 flex items-center justify-between text-xs font-bold text-slate-800 transition-colors"
+                    href="/grafik"
+                    className="p-3 rounded-xl bg-slate-50 hover:bg-sky-50 border border-slate-200/80 hover:border-sky-300 flex items-center justify-between text-xs font-bold text-slate-800 transition-colors"
                   >
                     <span className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-slate-600" />
-                      Direktori Siswa & JAKRA
+                      <BarChart3 className="w-4 h-4 text-sky-600" />
+                      Grafik & Analitik Status Gizi
                     </span>
                     <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                   </Link>
