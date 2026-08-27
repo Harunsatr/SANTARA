@@ -36,6 +36,8 @@ import {
   Camera,
   MapPin,
   Trash2,
+  Globe,
+  Archive,
 } from 'lucide-react';
 import { EducationArticle } from '@/types/models';
 import { fetchEducations, createEducation, updateEducation, deleteEducation, uploadArticleImage } from '@/lib/api/educations';
@@ -45,8 +47,12 @@ import {
   fetchActivitiesWithPhotos,
   saveActivityPhoto,
   deleteActivityPhoto,
+  updateActivityStatus,
+  updateActivityDetail,
+  createActivity,
   ActivityDetail,
   ActivityPhotoItem,
+  ActivityStatus,
 } from '@/lib/services/activityPhotoService';
 import Link from 'next/link';
 
@@ -80,6 +86,7 @@ export default function EdukasiKelolaPage() {
   // Program Activities Documentation States
   const [activities, setActivities] = useState<ActivityDetail[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<ActivityDetail | null>(null);
+  const [activityFilterStatus, setActivityFilterStatus] = useState<'ALL' | 'published' | 'draft'>('ALL');
   const [isActivityDetailModalOpen, setIsActivityDetailModalOpen] = useState(false);
   const [isUploadPhotoModalOpen, setIsUploadPhotoModalOpen] = useState(false);
   const [uploadActivityId, setUploadActivityId] = useState('ACT001');
@@ -90,6 +97,25 @@ export default function EdukasiKelolaPage() {
   const [isSubmittingPhoto, setIsSubmittingPhoto] = useState(false);
   const [uploadPhotoError, setUploadPhotoError] = useState<string | null>(null);
   const [viewingPhoto, setViewingPhoto] = useState<ActivityPhotoItem | null>(null);
+
+  // Activity Status Confirmation State
+  const [activityStatusConfirm, setActivityStatusConfirm] = useState<{
+    activity: ActivityDetail;
+    targetStatus: ActivityStatus;
+  } | null>(null);
+  const [isChangingActivityStatus, setIsChangingActivityStatus] = useState(false);
+
+  // Activity Form (Create / Edit) States
+  const [isActivityFormModalOpen, setIsActivityFormModalOpen] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<ActivityDetail | null>(null);
+  const [actFormTitle, setActFormTitle] = useState('');
+  const [actFormCategory, setActFormCategory] = useState('workshop');
+  const [actFormDate, setActFormDate] = useState('');
+  const [actFormLocation, setActFormLocation] = useState('');
+  const [actFormDescription, setActFormDescription] = useState('');
+  const [actFormStatus, setActFormStatus] = useState<ActivityStatus>('draft');
+  const [isSubmittingActivityForm, setIsSubmittingActivityForm] = useState(false);
+  const [actFormError, setActFormError] = useState<string | null>(null);
 
   // Form states
   const [formTitle, setFormTitle] = useState('');
@@ -489,6 +515,146 @@ export default function EdukasiKelolaPage() {
     }
   };
 
+  // 9d. Activity Status & Lifecycle Handlers
+  const handlePromptChangeStatus = (act: ActivityDetail, targetStatus: ActivityStatus) => {
+    setActivityStatusConfirm({ activity: act, targetStatus });
+  };
+
+  const handleExecuteChangeStatus = async () => {
+    if (!activityStatusConfirm) return;
+    setIsChangingActivityStatus(true);
+
+    try {
+      const { activity, targetStatus } = activityStatusConfirm;
+      const res = await updateActivityStatus(activity.id, targetStatus);
+
+      if (res.success) {
+        setToast({
+          message: res.message,
+          type: 'success',
+        });
+        setActivityStatusConfirm(null);
+
+        // Refresh activities state
+        const updatedActs = await fetchActivitiesWithPhotos();
+        setActivities(updatedActs);
+        if (selectedActivity && selectedActivity.id === activity.id) {
+          const updatedSelected = updatedActs.find(a => a.id === activity.id);
+          if (updatedSelected) setSelectedActivity(updatedSelected);
+        }
+      } else {
+        setToast({
+          message: res.message || 'Gagal mengubah status publikasi kegiatan.',
+          type: 'error',
+        });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan sistem saat mengubah status.';
+      setToast({ message: msg, type: 'error' });
+    } finally {
+      setIsChangingActivityStatus(false);
+    }
+  };
+
+  // 9e. Activity Form Handlers (Create / Edit)
+  const handleOpenAddActivityModal = () => {
+    setEditingActivity(null);
+    setActFormTitle('');
+    setActFormCategory('workshop');
+    setActFormDate(new Date().toISOString().split('T')[0]);
+    setActFormLocation('SMAN 1 Kota Batu');
+    setActFormDescription('');
+    setActFormStatus('draft');
+    setActFormError(null);
+    setIsActivityFormModalOpen(true);
+  };
+
+  const handleOpenEditActivityModal = (act: ActivityDetail) => {
+    setEditingActivity(act);
+    setActFormTitle(act.title);
+    setActFormCategory(act.category);
+    setActFormDate(act.activityDate);
+    setActFormLocation(act.location);
+    setActFormDescription(act.description);
+    setActFormStatus(act.status || 'draft');
+    setActFormError(null);
+    setIsActivityFormModalOpen(true);
+  };
+
+  const handleSubmitActivityForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!actFormTitle.trim()) {
+      setActFormError('Judul kegiatan wajib diisi.');
+      return;
+    }
+    if (!actFormDescription.trim()) {
+      setActFormError('Deskripsi kegiatan wajib diisi.');
+      return;
+    }
+
+    setIsSubmittingActivityForm(true);
+    setActFormError(null);
+
+    try {
+      if (editingActivity) {
+        const res = await updateActivityDetail(editingActivity.id, {
+          title: actFormTitle.trim(),
+          category: actFormCategory,
+          activityDate: actFormDate,
+          location: actFormLocation.trim(),
+          description: actFormDescription.trim(),
+          status: actFormStatus,
+        });
+
+        if (res.success && res.data) {
+          setToast({ message: res.message, type: 'success' });
+          setIsActivityFormModalOpen(false);
+          const updatedActs = await fetchActivitiesWithPhotos();
+          setActivities(updatedActs);
+          if (selectedActivity && selectedActivity.id === editingActivity.id) {
+            const updatedSelected = updatedActs.find(a => a.id === editingActivity.id);
+            if (updatedSelected) setSelectedActivity(updatedSelected);
+          }
+        } else {
+          setActFormError(res.message || 'Gagal memperbarui kegiatan.');
+        }
+      } else {
+        const res = await createActivity({
+          title: actFormTitle.trim(),
+          category: actFormCategory,
+          activityDate: actFormDate,
+          location: actFormLocation.trim(),
+          description: actFormDescription.trim(),
+          status: actFormStatus,
+        });
+
+        if (res.success && res.data) {
+          setToast({ message: res.message, type: 'success' });
+          setIsActivityFormModalOpen(false);
+          const updatedActs = await fetchActivitiesWithPhotos();
+          setActivities(updatedActs);
+        } else {
+          setActFormError(res.message || 'Gagal membuat kegiatan baru.');
+        }
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan sistem saat menyimpan kegiatan.';
+      setActFormError(msg);
+    } finally {
+      setIsSubmittingActivityForm(false);
+    }
+  };
+
+  // 9f. Filtered Activities List
+  const filteredActivities = useMemo(() => {
+    return activities.filter(act => {
+      if (activityFilterStatus !== 'ALL' && act.status !== activityFilterStatus) {
+        return false;
+      }
+      return true;
+    });
+  }, [activities, activityFilterStatus]);
+
   // 9c. Categories List
   const categoriesList = useMemo(() => {
     const set = new Set<string>();
@@ -881,7 +1047,7 @@ export default function EdukasiKelolaPage() {
       {/* SECTION: DOKUMENTASI KEGIATAN PROGRAM SATRIA                              */}
       {/* ========================================================================= */}
       <section className="flex flex-col gap-4 mt-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-emerald-100 rounded-xl text-emerald-700">
               <Camera className="w-6 h-6" />
@@ -896,88 +1062,197 @@ export default function EdukasiKelolaPage() {
             </div>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleOpenUploadPhoto()}
-            className="flex items-center gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold"
-          >
-            <Camera className="w-4 h-4" />
-            <span>Unggah Foto Kegiatan</span>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Status Filter Buttons */}
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setActivityFilterStatus('ALL')}
+                className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                  activityFilterStatus === 'ALL'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Semua ({activities.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivityFilterStatus('published')}
+                className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                  activityFilterStatus === 'published'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Published ({activities.filter(a => a.status === 'published').length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivityFilterStatus('draft')}
+                className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                  activityFilterStatus === 'draft'
+                    ? 'bg-slate-700 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Draft ({activities.filter(a => a.status === 'draft').length})
+              </button>
+            </div>
+
+            {/* Create Activity Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleOpenAddActivityModal}
+              className="flex items-center gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tambah Kegiatan</span>
+            </Button>
+
+            {/* Upload Photo Button */}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => handleOpenUploadPhoto()}
+              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 font-bold text-white shadow-sm"
+            >
+              <Camera className="w-4 h-4" />
+              <span>Unggah Foto</span>
+            </Button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {activities.map((act) => {
-            const hasPhotos = act.photos && act.photos.length > 0;
-            const latestPhoto = hasPhotos ? act.photos[0] : null;
+        {filteredActivities.length === 0 ? (
+          <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-sm">
+            Tidak ada dokumentasi kegiatan dengan status &ldquo;{activityFilterStatus}&rdquo;.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredActivities.map((act) => {
+              const hasPhotos = act.photos && act.photos.length > 0;
+              const latestPhoto = hasPhotos ? act.photos[0] : null;
 
-            return (
-              <Card
-                key={act.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => handleOpenActivityDetail(act)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleOpenActivityDetail(act);
-                  }
-                }}
-                className="p-4 border border-slate-200 bg-white hover:border-emerald-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded-2xl overflow-hidden"
-              >
-                <div>
-                  {/* Thumbnail / Header Banner */}
-                  {latestPhoto ? (
-                    <div className="relative w-full h-36 rounded-xl overflow-hidden mb-3 bg-slate-100 border border-slate-200">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={latestPhoto.url}
-                        alt={act.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-slate-900/80 text-white text-[10px] font-bold backdrop-blur-xs">
-                        {act.photos.length} Foto
-                      </span>
-                    </div>
-                  ) : null}
+              return (
+                <Card
+                  key={act.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleOpenActivityDetail(act)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleOpenActivityDetail(act);
+                    }
+                  }}
+                  className="p-4 border border-slate-200 bg-white hover:border-emerald-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded-2xl overflow-hidden"
+                >
+                  <div>
+                    {/* Thumbnail / Header Banner */}
+                    {latestPhoto ? (
+                      <div className="relative w-full h-36 rounded-xl overflow-hidden mb-3 bg-slate-100 border border-slate-200">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={latestPhoto.url}
+                          alt={act.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-slate-900/80 text-white text-[10px] font-bold backdrop-blur-xs">
+                          {act.photos.length} Foto
+                        </span>
+                      </div>
+                    ) : null}
 
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1.5">
-                      <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider">
-                        {act.category}
-                      </Badge>
-                      <span className="text-[10px] font-mono font-bold text-slate-400">
-                        {act.id}
-                      </span>
+                    {/* Metadata bar */}
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider">
+                          {act.category}
+                        </Badge>
+                        <span className="text-[10px] font-mono font-bold text-slate-400">
+                          {act.id}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        {act.status === 'published' ? (
+                          <Badge variant="success" className="text-[10px] uppercase font-bold">
+                            Published
+                          </Badge>
+                        ) : (
+                          <Badge variant="neutral" className="text-[10px] uppercase font-bold">
+                            Draft
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-xs text-slate-400 flex items-center gap-1">
+
+                    <span className="text-xs text-slate-400 flex items-center gap-1 mb-1">
                       <Calendar className="w-3 h-3" />
                       {act.activityDate}
                     </span>
-                  </div>
-                  <h3 className="text-sm font-bold text-slate-900 line-clamp-2 group-hover:text-emerald-700 transition-colors">
-                    {act.title}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed line-clamp-2">
-                    {act.description}
-                  </p>
-                </div>
 
-                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                  <span className="flex items-center gap-1 truncate max-w-[170px]">
-                    <MapPin className="w-3 h-3 shrink-0 text-slate-400" />
-                    <span className="truncate">{act.location}</span>
-                  </span>
-                  <span className="text-emerald-600 font-bold group-hover:translate-x-0.5 transition-transform shrink-0 flex items-center gap-0.5">
-                    <span>Lihat Detail</span>
-                    <span className="text-xs">&rarr;</span>
-                  </span>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+                    <h3 className="text-sm font-bold text-slate-900 line-clamp-2 group-hover:text-emerald-700 transition-colors">
+                      {act.title}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1.5 leading-relaxed line-clamp-2">
+                      {act.description}
+                    </p>
+                  </div>
+
+                  {/* Actions footer */}
+                  <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]" onClick={(e) => e.stopPropagation()}>
+                    <span className="flex items-center gap-1 truncate max-w-[130px] text-slate-400">
+                      <MapPin className="w-3 h-3 shrink-0 text-slate-400" />
+                      <span className="truncate">{act.location}</span>
+                    </span>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEditActivityModal(act);
+                        }}
+                        className="px-2 py-1 rounded text-slate-600 hover:text-sky-700 hover:bg-slate-100 font-semibold cursor-pointer"
+                        title="Edit Kegiatan"
+                      >
+                        Edit
+                      </button>
+
+                      {act.status === 'published' ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePromptChangeStatus(act, 'draft');
+                          }}
+                          className="px-2 py-1 rounded text-amber-700 bg-amber-50 hover:bg-amber-100 font-semibold cursor-pointer"
+                          title="Jadikan Draft"
+                        >
+                          Jadikan Draft
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePromptChangeStatus(act, 'published');
+                          }}
+                          className="px-2 py-1 rounded text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-bold cursor-pointer"
+                          title="Publikasikan Kegiatan"
+                        >
+                          Publish
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* ========================================================================= */}
@@ -1275,6 +1550,15 @@ export default function EdukasiKelolaPage() {
                   <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600">
                     {selectedActivity.id}
                   </span>
+                  {selectedActivity.status === 'published' ? (
+                    <Badge variant="success" className="text-xs uppercase font-bold">
+                      Published
+                    </Badge>
+                  ) : (
+                    <Badge variant="neutral" className="text-xs uppercase font-bold">
+                      Draft
+                    </Badge>
+                  )}
                 </div>
                 <div className="text-xs text-slate-500 flex items-center gap-1 font-medium">
                   <Calendar className="w-3.5 h-3.5 text-slate-400" />
@@ -1394,22 +1678,257 @@ export default function EdukasiKelolaPage() {
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100">
+              <div className="flex items-center gap-2">
+                {selectedActivity.status === 'published' ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePromptChangeStatus(selectedActivity, 'draft')}
+                    className="text-amber-700 border-amber-300 hover:bg-amber-50 font-bold"
+                  >
+                    <Archive className="w-3.5 h-3.5 mr-1.5" />
+                    <span>Jadikan Draft</span>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handlePromptChangeStatus(selectedActivity, 'published')}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                  >
+                    <Globe className="w-3.5 h-3.5 mr-1.5" />
+                    <span>Publikasikan</span>
+                  </Button>
+                )}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsActivityDetailModalOpen(false);
+                    handleOpenEditActivityModal(selectedActivity);
+                  }}
+                  className="font-semibold"
+                >
+                  <FileEdit className="w-3.5 h-3.5 mr-1" />
+                  <span>Edit Data</span>
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenUploadPhoto(selectedActivity.id)}
+                  className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold"
+                >
+                  <Camera className="w-3.5 h-3.5 mr-1.5" />
+                  <span>Unggah Foto</span>
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setIsActivityDetailModalOpen(false)}
+                >
+                  Tutup
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: FORM TAMBAH / EDIT DOKUMENTASI KEGIATAN                            */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={isActivityFormModalOpen}
+        onClose={() => !isSubmittingActivityForm && setIsActivityFormModalOpen(false)}
+        title={editingActivity ? 'Edit Dokumentasi Kegiatan' : 'Tambah Dokumentasi Kegiatan Baru'}
+        description="Lengkapi informasi log pelaksanaan program SATRIA untuk dokumentasi dan portal edukasi."
+        maxWidth="md"
+      >
+        <form onSubmit={handleSubmitActivityForm} className="space-y-4 pt-2">
+          {actFormError && (
+            <Alert variant="error" title="Gagal Menyimpan Kegiatan">
+              {actFormError}
+            </Alert>
+          )}
+
+          {/* Title */}
+          <Input
+            label="Judul Kegiatan *"
+            name="activity_title"
+            placeholder="Contoh: Workshop V — Evaluasi Intervensi Gizi Siswa"
+            value={actFormTitle}
+            onChange={(e) => setActFormTitle(e.target.value)}
+            required
+          />
+
+          {/* Category & Date */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Select
+              label="Kategori Kegiatan *"
+              name="activity_category"
+              value={actFormCategory}
+              onChange={(e) => setActFormCategory(e.target.value)}
+              options={[
+                { label: 'Workshop', value: 'workshop' },
+                { label: 'Pengukuran Antropometri', value: 'pengukuran' },
+                { label: 'Skrining Kesehatan', value: 'skrining' },
+                { label: 'Kader SATRIA', value: 'kader' },
+                { label: 'Launching / Peresmian', value: 'launching' },
+                { label: 'Monitoring & Evaluasi', value: 'monev' },
+              ]}
+              required
+            />
+
+            <Input
+              type="date"
+              label="Tanggal Pelaksanaan *"
+              name="activity_date"
+              value={actFormDate}
+              onChange={(e) => setActFormDate(e.target.value)}
+              required
+            />
+          </div>
+
+          {/* Location */}
+          <Input
+            label="Lokasi Pelaksanaan *"
+            name="activity_location"
+            placeholder="Contoh: Ruang UKS / Aula SMAN 1 Kota Batu"
+            value={actFormLocation}
+            onChange={(e) => setActFormLocation(e.target.value)}
+            required
+          />
+
+          {/* Description */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Deskripsi Pelaksanaan Kegiatan <span className="text-rose-500">*</span>
+            </label>
+            <textarea
+              rows={4}
+              placeholder="Tuliskan ringkasan materi, pihak yang terlibat, dan hasil kegiatan..."
+              value={actFormDescription}
+              onChange={(e) => setActFormDescription(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none leading-relaxed"
+              required
+            />
+          </div>
+
+          {/* Publication Status */}
+          <Select
+            label="Status Publikasi"
+            name="activity_status"
+            value={actFormStatus}
+            onChange={(e) => setActFormStatus(e.target.value as ActivityStatus)}
+            options={[
+              { label: 'Draft (Simpan sementara, tidak tampil di portal publik)', value: 'draft' },
+              { label: 'Published (Tampilkan ke publik di halaman edukasi)', value: 'published' },
+            ]}
+          />
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isSubmittingActivityForm}
+              onClick={() => setIsActivityFormModalOpen(false)}
+            >
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={isSubmittingActivityForm}
+              className="bg-emerald-600 hover:bg-emerald-700 font-bold text-white shadow-sm"
+            >
+              {isSubmittingActivityForm ? 'Menyimpan...' : 'Simpan Kegiatan'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: KONFIRMASI STATUS PUBLIKASI DOKUMENTASI KEGIATAN                   */}
+      {/* ========================================================================= */}
+      {activityStatusConfirm && (
+        <Modal
+          isOpen={!!activityStatusConfirm}
+          onClose={() => !isChangingActivityStatus && setActivityStatusConfirm(null)}
+          title={
+            activityStatusConfirm.targetStatus === 'published'
+              ? 'Publikasikan Dokumentasi Kegiatan?'
+              : 'Jadikan Dokumentasi sebagai Draft?'
+          }
+          maxWidth="md"
+        >
+          <div className="space-y-4 pt-1">
+            <div
+              className={`p-4 rounded-2xl border flex flex-col gap-2 ${
+                activityStatusConfirm.targetStatus === 'published'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                  : 'bg-amber-50 border-amber-200 text-amber-900'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant={activityStatusConfirm.targetStatus === 'published' ? 'success' : 'warning'}
+                  className="text-[10px] uppercase font-bold"
+                >
+                  {activityStatusConfirm.targetStatus === 'published'
+                    ? 'Konfirmasi Publikasi'
+                    : 'Konfirmasi Pengalihan Draft'}
+                </Badge>
+                <span className="text-xs font-mono font-bold">
+                  {activityStatusConfirm.activity.id}
+                </span>
+              </div>
+
+              <h4 className="text-sm font-bold text-slate-900 mt-1">
+                {activityStatusConfirm.activity.title}
+              </h4>
+
+              <p className="text-xs leading-relaxed">
+                {activityStatusConfirm.targetStatus === 'published'
+                  ? 'Dokumentasi kegiatan ini akan dipublikasikan dan dapat diakses oleh seluruh siswa dan masyarakat pada portal edukasi SANTARA.'
+                  : 'Dokumentasi kegiatan ini akan dialihkan menjadi Draft dan tidak akan lagi ditampilkan pada portal publik sampai Anda mempublikasikannya kembali.'}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => handleOpenUploadPhoto(selectedActivity.id)}
-                className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold"
+                disabled={isChangingActivityStatus}
+                onClick={() => setActivityStatusConfirm(null)}
               >
-                <Camera className="w-3.5 h-3.5 mr-1.5" />
-                <span>Unggah Foto Kegiatan</span>
+                Batal
               </Button>
               <Button
+                type="button"
                 variant="primary"
                 size="sm"
-                onClick={() => setIsActivityDetailModalOpen(false)}
+                isLoading={isChangingActivityStatus}
+                onClick={handleExecuteChangeStatus}
+                className={
+                  activityStatusConfirm.targetStatus === 'published'
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold'
+                    : 'bg-amber-600 hover:bg-amber-700 text-white font-bold'
+                }
               >
-                Tutup
+                {isChangingActivityStatus
+                  ? 'Memproses...'
+                  : activityStatusConfirm.targetStatus === 'published'
+                  ? 'Publikasikan Sekarang'
+                  : 'Jadikan Draft'}
               </Button>
             </div>
           </div>

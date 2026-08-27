@@ -67,7 +67,7 @@ export default function PublicEducationPage() {
       try {
         const [res, acts] = await Promise.all([
           fetchEducations(),
-          fetchActivitiesWithPhotos(),
+          fetchActivitiesWithPhotos({ status: 'published' }),
         ]);
         if (!ignore) {
           if (res.success && Array.isArray(res.data)) {

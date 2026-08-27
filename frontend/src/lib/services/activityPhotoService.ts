@@ -4,6 +4,8 @@
  * Supports persistent client-side storage, file validation, and activity relations.
  */
 
+export type ActivityStatus = 'draft' | 'published';
+
 export interface ActivityPhotoItem {
   id: string;
   activityId: string;
@@ -20,6 +22,10 @@ export interface ActivityDetail {
   activityDate: string;
   description: string;
   location: string;
+  status: ActivityStatus;
+  publishedAt?: string;
+  updatedAt?: string;
+  createdAt?: string;
   photos: ActivityPhotoItem[];
 }
 
@@ -30,10 +36,11 @@ export interface ActivityUploadResult {
   data?: ActivityPhotoItem;
 }
 
-const STORAGE_KEY = 'santara_activity_photos_v1';
+const STORAGE_PHOTOS_KEY = 'santara_activity_photos_v1';
+const STORAGE_ACTIVITIES_KEY = 'santara_activities_v1';
 
 /**
- * Standard curriculum activities from official program document
+ * Standard curriculum activities from official program document (default published)
  */
 export const OFFICIAL_PROGRAM_ACTIVITIES: Omit<ActivityDetail, 'photos'>[] = [
   {
@@ -44,6 +51,10 @@ export const OFFICIAL_PROGRAM_ACTIVITIES: Omit<ActivityDetail, 'photos'>[] = [
     description:
       'Pemetaan kondisi gizi, status anemia, serta penjajakan awal bersama pihak pimpinan sekolah mitra, tim guru pembina, dan pengurus UKS SMA.',
     location: 'SMAN 1 Kota Batu',
+    status: 'published',
+    publishedAt: '2024-07-15T08:00:00.000Z',
+    createdAt: '2024-07-15T08:00:00.000Z',
+    updatedAt: '2024-07-15T08:00:00.000Z',
   },
   {
     id: 'ACT002',
@@ -53,6 +64,10 @@ export const OFFICIAL_PROGRAM_ACTIVITIES: Omit<ActivityDetail, 'photos'>[] = [
     description:
       'Penyusunan, telaah kurikulum edukasi gizi remaja, serta finalisasi rancangan cetak kartu rekam kesehatan fisik JAKRA (Jejak Kesehatan Remaja).',
     location: 'Laboratorium FIK UM',
+    status: 'published',
+    publishedAt: '2024-07-28T08:00:00.000Z',
+    createdAt: '2024-07-28T08:00:00.000Z',
+    updatedAt: '2024-07-28T08:00:00.000Z',
   },
   {
     id: 'ACT003',
@@ -62,6 +77,10 @@ export const OFFICIAL_PROGRAM_ACTIVITIES: Omit<ActivityDetail, 'photos'>[] = [
     description:
       'Pemberian materi komprehensif mengenai bahaya anemia defisiensi besi, Kurang Energi Kronis (KEK), serta dampak malnutrisi pada masa pubertas.',
     location: 'Aula SMAN 1 Kota Batu',
+    status: 'published',
+    publishedAt: '2024-08-05T08:00:00.000Z',
+    createdAt: '2024-08-05T08:00:00.000Z',
+    updatedAt: '2024-08-05T08:00:00.000Z',
   },
   {
     id: 'ACT004',
@@ -71,6 +90,10 @@ export const OFFICIAL_PROGRAM_ACTIVITIES: Omit<ActivityDetail, 'photos'>[] = [
     description:
       'Pelatihan teknis tatap muka mengenai pengukuran tinggi badan (Microtoise), berat badan digital, lingkar lengan atas (LiLA), dan interpretasi Standar WHO Anthro.',
     location: 'Ruang UKS SMAN 1 Kota Batu',
+    status: 'published',
+    publishedAt: '2024-08-12T08:00:00.000Z',
+    createdAt: '2024-08-12T08:00:00.000Z',
+    updatedAt: '2024-08-12T08:00:00.000Z',
   },
   {
     id: 'ACT005',
@@ -80,6 +103,10 @@ export const OFFICIAL_PROGRAM_ACTIVITIES: Omit<ActivityDetail, 'photos'>[] = [
     description:
       'Edukasi pola hidup bersih dan sehat (PHBS), gizi seimbang harian, serta kepatuhan minum Tablet Tambah Darah (TTD) satu tablet setiap minggu.',
     location: 'Aula SMAN 1 Kota Batu',
+    status: 'published',
+    publishedAt: '2024-08-19T08:00:00.000Z',
+    createdAt: '2024-08-19T08:00:00.000Z',
+    updatedAt: '2024-08-19T08:00:00.000Z',
   },
   {
     id: 'ACT006',
@@ -89,6 +116,10 @@ export const OFFICIAL_PROGRAM_ACTIVITIES: Omit<ActivityDetail, 'photos'>[] = [
     description:
       'Praktik langsung pemeriksaan kadar hemoglobin (Hb) darah perifer dan pengukuran tekanan darah dengan pendampingan instruktur kesehatan.',
     location: 'Ruang UKS SMAN 1 Kota Batu',
+    status: 'published',
+    publishedAt: '2024-08-26T08:00:00.000Z',
+    createdAt: '2024-08-26T08:00:00.000Z',
+    updatedAt: '2024-08-26T08:00:00.000Z',
   },
   {
     id: 'ACT007',
@@ -98,6 +129,10 @@ export const OFFICIAL_PROGRAM_ACTIVITIES: Omit<ActivityDetail, 'photos'>[] = [
     description:
       'Pelantikan resmi Satuan Remaja Peduli Kesehatan (SATRIA) SMA, penyerahan selempang kader, dan peluncuran portal digital pemantauan SANTARA.',
     location: 'SMAN 1 Kota Batu',
+    status: 'published',
+    publishedAt: '2024-09-02T08:00:00.000Z',
+    createdAt: '2024-09-02T08:00:00.000Z',
+    updatedAt: '2024-09-02T08:00:00.000Z',
   },
   {
     id: 'ACT008',
@@ -107,8 +142,46 @@ export const OFFICIAL_PROGRAM_ACTIVITIES: Omit<ActivityDetail, 'photos'>[] = [
     description:
       'Pelaksanaan pemantauan antropometri, skrining Hb, dan log konsumsi TTD secara mandiri oleh kader SATRIA disertai monitoring dan evaluasi berkala.',
     location: 'SMAN 1 Kota Batu',
+    status: 'published',
+    publishedAt: '2024-09-15T08:00:00.000Z',
+    createdAt: '2024-09-15T08:00:00.000Z',
+    updatedAt: '2024-09-15T08:00:00.000Z',
   },
 ];
+
+/**
+ * Get stored activities list
+ */
+export function getStoredActivities(): Omit<ActivityDetail, 'photos'>[] {
+  if (typeof window === 'undefined') return OFFICIAL_PROGRAM_ACTIVITIES;
+  try {
+    const raw = localStorage.getItem(STORAGE_ACTIVITIES_KEY);
+    if (!raw) {
+      localStorage.setItem(STORAGE_ACTIVITIES_KEY, JSON.stringify(OFFICIAL_PROGRAM_ACTIVITIES));
+      return OFFICIAL_PROGRAM_ACTIVITIES;
+    }
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      localStorage.setItem(STORAGE_ACTIVITIES_KEY, JSON.stringify(OFFICIAL_PROGRAM_ACTIVITIES));
+      return OFFICIAL_PROGRAM_ACTIVITIES;
+    }
+    return parsed;
+  } catch {
+    return OFFICIAL_PROGRAM_ACTIVITIES;
+  }
+}
+
+/**
+ * Save stored activities list
+ */
+export function saveStoredActivities(activities: Omit<ActivityDetail, 'photos'>[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_ACTIVITIES_KEY, JSON.stringify(activities));
+  } catch (err) {
+    console.error('Failed to save activities to localStorage:', err);
+  }
+}
 
 /**
  * Get all stored photo items from persistent storage
@@ -116,7 +189,7 @@ export const OFFICIAL_PROGRAM_ACTIVITIES: Omit<ActivityDetail, 'photos'>[] = [
 export function getStoredActivityPhotos(): ActivityPhotoItem[] {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_PHOTOS_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -131,25 +204,162 @@ export function getStoredActivityPhotos(): ActivityPhotoItem[] {
 export function saveStoredActivityPhotos(photos: ActivityPhotoItem[]): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(photos));
+    localStorage.setItem(STORAGE_PHOTOS_KEY, JSON.stringify(photos));
   } catch (err) {
     console.error('Failed to save activity photos to localStorage:', err);
   }
 }
 
 /**
- * Fetch program activities combined with their attached photos
+ * Fetch program activities combined with their attached photos, with optional status filter
  */
-export async function fetchActivitiesWithPhotos(): Promise<ActivityDetail[]> {
+export async function fetchActivitiesWithPhotos(options?: {
+  status?: 'all' | 'published' | 'draft';
+}): Promise<ActivityDetail[]> {
+  const allActivities = getStoredActivities();
   const allStoredPhotos = getStoredActivityPhotos();
 
-  return OFFICIAL_PROGRAM_ACTIVITIES.map(act => {
+  const combined: ActivityDetail[] = allActivities.map(act => {
     const matchedPhotos = allStoredPhotos.filter(p => p.activityId === act.id);
     return {
       ...act,
+      status: (act.status || 'published').toLowerCase() as ActivityStatus,
       photos: matchedPhotos,
     };
   });
+
+  const filterStatus = options?.status || 'all';
+  if (filterStatus === 'published') {
+    return combined.filter(a => a.status === 'published');
+  }
+  if (filterStatus === 'draft') {
+    return combined.filter(a => a.status === 'draft');
+  }
+  return combined;
+}
+
+/**
+ * Update activity publication status (draft <-> published)
+ */
+export async function updateActivityStatus(
+  activityId: string,
+  newStatus: ActivityStatus
+): Promise<{ success: boolean; data?: ActivityDetail; message: string }> {
+  const allActivities = getStoredActivities();
+  const index = allActivities.findIndex(a => a.id === activityId);
+
+  if (index === -1) {
+    return {
+      success: false,
+      message: `Kegiatan dengan ID ${activityId} tidak ditemukan.`,
+    };
+  }
+
+  const now = new Date().toISOString();
+  const existing = allActivities[index];
+
+  const updated: Omit<ActivityDetail, 'photos'> = {
+    ...existing,
+    status: newStatus,
+    updatedAt: now,
+    publishedAt: newStatus === 'published' ? existing.publishedAt || now : undefined,
+  };
+
+  allActivities[index] = updated;
+  saveStoredActivities(allActivities);
+
+  const allPhotos = getStoredActivityPhotos().filter(p => p.activityId === activityId);
+
+  return {
+    success: true,
+    data: { ...updated, photos: allPhotos },
+    message:
+      newStatus === 'published'
+        ? `Dokumentasi "${updated.title}" berhasil dipublikasikan ke portal publik.`
+        : `Dokumentasi "${updated.title}" berhasil dialihkan menjadi Draft.`,
+  };
+}
+
+/**
+ * Update activity details (title, description, location, category, date)
+ */
+export async function updateActivityDetail(
+  activityId: string,
+  updates: Partial<Omit<ActivityDetail, 'id' | 'photos'>>
+): Promise<{ success: boolean; data?: ActivityDetail; message: string }> {
+  const allActivities = getStoredActivities();
+  const index = allActivities.findIndex(a => a.id === activityId);
+
+  if (index === -1) {
+    return {
+      success: false,
+      message: `Kegiatan dengan ID ${activityId} tidak ditemukan.`,
+    };
+  }
+
+  const now = new Date().toISOString();
+  const existing = allActivities[index];
+
+  const updated: Omit<ActivityDetail, 'photos'> = {
+    ...existing,
+    ...updates,
+    updatedAt: now,
+  };
+
+  allActivities[index] = updated;
+  saveStoredActivities(allActivities);
+
+  const allPhotos = getStoredActivityPhotos().filter(p => p.activityId === activityId);
+
+  return {
+    success: true,
+    data: { ...updated, photos: allPhotos },
+    message: `Detail dokumentasi kegiatan "${updated.title}" berhasil diperbarui.`,
+  };
+}
+
+/**
+ * Create a new activity documentation record (default status = draft)
+ */
+export async function createActivity(
+  data: Omit<ActivityDetail, 'id' | 'photos' | 'createdAt' | 'updatedAt'>
+): Promise<{ success: boolean; data?: ActivityDetail; message: string }> {
+  const allActivities = getStoredActivities();
+
+  // Generate next ID (e.g. ACT009)
+  let maxNum = 0;
+  allActivities.forEach(a => {
+    const match = a.id.match(/^ACT(\d+)$/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (!isNaN(num) && num > maxNum) maxNum = num;
+    }
+  });
+
+  const nextId = `ACT${String(maxNum + 1).padStart(3, '0')}`;
+  const now = new Date().toISOString();
+
+  const newActivity: Omit<ActivityDetail, 'photos'> = {
+    id: nextId,
+    title: data.title.trim(),
+    category: data.category || 'workshop',
+    activityDate: data.activityDate || now.split('T')[0],
+    description: data.description.trim(),
+    location: data.location.trim() || 'SMAN 1 Kota Batu',
+    status: data.status || 'draft', // Default is draft!
+    publishedAt: data.status === 'published' ? now : undefined,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const updatedList = [newActivity, ...allActivities];
+  saveStoredActivities(updatedList);
+
+  return {
+    success: true,
+    data: { ...newActivity, photos: [] },
+    message: `Dokumentasi kegiatan baru berhasil dibuat sebagai ${newActivity.status === 'published' ? 'Published' : 'Draft'}.`,
+  };
 }
 
 /**
