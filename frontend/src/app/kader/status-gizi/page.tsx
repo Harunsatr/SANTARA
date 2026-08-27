@@ -37,7 +37,7 @@ import { fetchStudents, createStudent } from '@/lib/api/students';
 import { fetchSchools } from '@/lib/api/schools';
 import { fetchClasses, createClass } from '@/lib/api/classes';
 import { adaptExaminationsFromApi, serializeExaminationNotes } from '@/lib/adapters/examinationAdapter';
-import { adaptStudentForUI, filterValidClasses, resolveClassName, normalizeString } from '@/lib/adapters';
+import { adaptStudentForUI, filterValidClasses, resolveClassName, normalizeString, formatClassNameToRoman } from '@/lib/adapters';
 import { getNutritionStyle } from '@/lib/utils/nutrition';
 import { formatDateIndo, getTodayDateString } from '@/lib/utils/date';
 import { calculateBMI } from '@/lib/utils/number';
@@ -323,7 +323,7 @@ export default function StatusGiziPage() {
       return;
     }
 
-    const finalName = name || `Kelas ${gr}`;
+    const finalName = formatClassNameToRoman(name, gr);
 
     // Duplicate check on client
     const isDup = classes.some(
@@ -1166,9 +1166,9 @@ export default function StatusGiziPage() {
               onChange={e => setNewGrade(e.target.value)}
               className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
             >
-              <option value="10">Kelas X (Tingkat 10)</option>
-              <option value="11">Kelas XI (Tingkat 11)</option>
-              <option value="12">Kelas XII (Tingkat 12)</option>
+              <option value="10">Kelas X</option>
+              <option value="11">Kelas XI</option>
+              <option value="12">Kelas XII</option>
             </select>
           </div>
 

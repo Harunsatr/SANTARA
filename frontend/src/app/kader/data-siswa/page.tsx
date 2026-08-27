@@ -1140,7 +1140,7 @@ export default function DataSiswaPage() {
                   <Input
                     label="Nomor / Kode Siswa (student_code)"
                     name="edit_student_code"
-                    placeholder="Contoh: 10_A, 11_B"
+                    placeholder="Contoh: X_A, XI_B"
                     value={editFormData.student_code}
                     onChange={e => setEditFormData(prev => ({ ...prev, student_code: e.target.value }))}
                   />

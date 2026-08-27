@@ -1024,7 +1024,7 @@ export default function ProtectedGrafikPage() {
             <form onSubmit={handleAddClass} className="flex flex-col gap-4">
               <Input
                 label="Nama Kelas"
-                placeholder="Contoh: Kelas 11 A, Kelas 12"
+                placeholder="Contoh: Kelas X, X-A, Kelas XI IPA 1"
                 value={newClassName}
                 onChange={e => setNewClassName(e.target.value)}
                 helperText="Nama rombel atau tingkat kelas."
@@ -1038,9 +1038,9 @@ export default function ProtectedGrafikPage() {
                   onChange={e => setNewGrade(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
                 >
-                  <option value="10">Kelas X (Tingkat 10)</option>
-                  <option value="11">Kelas XI (Tingkat 11)</option>
-                  <option value="12">Kelas XII (Tingkat 12)</option>
+                  <option value="10">Kelas X</option>
+                  <option value="11">Kelas XI</option>
+                  <option value="12">Kelas XII</option>
                 </select>
               </div>
 
