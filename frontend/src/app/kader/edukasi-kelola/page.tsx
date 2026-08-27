@@ -1003,7 +1003,12 @@ export default function EdukasiKelolaPage() {
 
             {/* Actions */}
             <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-              <Link href="/edukasi" target="_blank" className="text-xs text-sky-600 hover:underline flex items-center gap-1">
+              <Link
+                href={`/edukasi/${selectedArticle.slug || selectedArticle.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-bold text-sky-600 hover:text-sky-700 hover:underline flex items-center gap-1"
+              >
                 <span>Buka di portal publik</span>
                 <ExternalLink className="w-3 h-3" />
               </Link>

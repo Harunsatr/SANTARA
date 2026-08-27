@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   Card,
   Badge,
@@ -45,10 +46,11 @@ export default function PublicEducationPage() {
     let ignore = false;
     async function loadArticles() {
       try {
-        const res = await fetchEducations({ status: 'PUBLISHED' });
+        const res = await fetchEducations();
         if (!ignore) {
           if (res.success && Array.isArray(res.data)) {
-            setArticles(res.data);
+            const published = res.data.filter(a => (a.status || 'published').toLowerCase() !== 'draft');
+            setArticles(published);
           }
           setLoadingArticles(false);
         }
@@ -606,7 +608,14 @@ export default function PublicEducationPage() {
             </div>
 
             {/* Modal footer action */}
-            <div className="pt-4 border-t border-slate-100 flex justify-end">
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+              <Link
+                href={`/edukasi/${selectedArticle.slug || selectedArticle.id}`}
+                className="text-xs font-bold text-sky-600 hover:text-sky-700 hover:underline inline-flex items-center gap-1"
+              >
+                <span>Buka Halaman Penuh</span>
+                <ExternalLink className="w-3 h-3" />
+              </Link>
               <Button
                 variant="outline"
                 size="sm"

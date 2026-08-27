@@ -371,10 +371,19 @@ export function normalizeEducationArticle(raw: unknown): EducationArticle {
   }
 
   const rec = raw as Record<string, unknown>;
+  const titleStr = normalizeString(rec.title);
+  let slugStr = normalizeString(rec.slug);
+  if (!slugStr && titleStr) {
+    slugStr = titleStr
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
   return {
     id: normalizeString(rec.id),
-    title: normalizeString(rec.title),
-    slug: normalizeString(rec.slug),
+    title: titleStr,
+    slug: slugStr,
     category: normalizeString(rec.category, 'Umum'),
     excerpt: normalizeString(rec.excerpt),
     content: normalizeString(rec.content),
