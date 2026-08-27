@@ -210,11 +210,7 @@ export default function DataSiswaPage() {
 
       if (field === 'student_code') {
         const trimmed = value.trim();
-        if (!trimmed) {
-          errors.student_code = 'Nomor/Kode siswa wajib diisi.';
-        } else if (!/^\d+$/.test(trimmed)) {
-          errors.student_code = 'Nomor/Kode siswa harus berupa angka (contoh: 011, 012, 10101).';
-        } else {
+        if (trimmed) {
           const isDupe = students.some(
             s =>
               (String(s.student_code).trim() === trimmed ||
@@ -251,13 +247,9 @@ export default function DataSiswaPage() {
 
     const errors: { [key: string]: string } = {};
 
-    // Validate student_code (Numeric Only)
+    // Validate student_code (Optional - auto-generated if empty)
     const code = formData.student_code.trim();
-    if (!code) {
-      errors.student_code = 'Nomor/Kode siswa wajib diisi.';
-    } else if (!/^\d+$/.test(code)) {
-      errors.student_code = 'Nomor/Kode siswa harus berupa angka (contoh: 011, 012, 10101).';
-    } else {
+    if (code) {
       const isDupe = students.some(
         s =>
           (String(s.student_code).trim() === code ||
@@ -296,7 +288,7 @@ export default function DataSiswaPage() {
       const payload = {
         school_id: formData.school_id,
         class_id: formData.class_id,
-        student_code: code,
+        student_code: code || undefined,
         nama: name,
         gender: formData.gender,
         birth_date: formData.birth_date,
@@ -757,16 +749,15 @@ export default function DataSiswaPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Input
-                label="Nomor / Kode Siswa (Angka Saja)"
+                label="Nomor / Kode Siswa (Opsional)"
                 name="student_code"
-                placeholder="Contoh: 011, 012, 10101"
+                placeholder="Otomatis digenerate sistem jika kosong"
                 value={formData.student_code}
                 onChange={e => handleInputChange('student_code', e.target.value)}
                 error={formValidation.student_code}
-                required
               />
               <p className="text-[11px] text-slate-500 mt-1">
-                Wajib angka/nomor induk. Jangan memasukkan nama atau huruf pada field ini.
+                Kosongkan untuk penomoran otomatis oleh sistem.
               </p>
             </div>
 
