@@ -34,12 +34,20 @@ import {
   Upload,
   X,
   Camera,
+  MapPin,
+  Trash2,
 } from 'lucide-react';
 import { EducationArticle } from '@/types/models';
 import { fetchEducations, createEducation, updateEducation, uploadArticleImage } from '@/lib/api/educations';
 import { formatDateIndo } from '@/lib/utils/date';
 import { useSession } from '@/context/SessionContext';
-import { OFFICIAL_PROGRAM_ACTIVITIES } from '@/lib/services/activityPhotoService';
+import {
+  fetchActivitiesWithPhotos,
+  saveActivityPhoto,
+  deleteActivityPhoto,
+  ActivityDetail,
+  ActivityPhotoItem,
+} from '@/lib/services/activityPhotoService';
 import Link from 'next/link';
 
 export default function EdukasiKelolaPage() {
@@ -63,6 +71,20 @@ export default function EdukasiKelolaPage() {
   const [editingArticle, setEditingArticle] = useState<EducationArticle | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<EducationArticle | null>(null);
 
+  // Program Activities Documentation States
+  const [activities, setActivities] = useState<ActivityDetail[]>([]);
+  const [selectedActivity, setSelectedActivity] = useState<ActivityDetail | null>(null);
+  const [isActivityDetailModalOpen, setIsActivityDetailModalOpen] = useState(false);
+  const [isUploadPhotoModalOpen, setIsUploadPhotoModalOpen] = useState(false);
+  const [uploadActivityId, setUploadActivityId] = useState('ACT001');
+  const [uploadPhotoFile, setUploadPhotoFile] = useState<File | null>(null);
+  const [uploadPhotoPreview, setUploadPhotoPreview] = useState<string | null>(null);
+  const [uploadCaption, setUploadCaption] = useState('');
+  const [uploadPhotographer, setUploadPhotographer] = useState('');
+  const [isSubmittingPhoto, setIsSubmittingPhoto] = useState(false);
+  const [uploadPhotoError, setUploadPhotoError] = useState<string | null>(null);
+  const [viewingPhoto, setViewingPhoto] = useState<ActivityPhotoItem | null>(null);
+
   // Form states
   const [formTitle, setFormTitle] = useState('');
   const [formSlug, setFormSlug] = useState('');
@@ -84,13 +106,17 @@ export default function EdukasiKelolaPage() {
 
     async function loadData() {
       try {
-        const res = await fetchEducations();
+        const [res, acts] = await Promise.all([
+          fetchEducations(),
+          fetchActivitiesWithPhotos(),
+        ]);
         if (!ignore) {
           if (res.success) {
             setArticles(res.data || []);
           } else {
             setFetchError(res.message || 'Gagal memuat artikel edukasi');
           }
+          setActivities(acts);
           setLastUpdated(new Date());
           setIsLoading(false);
         }
@@ -116,12 +142,16 @@ export default function EdukasiKelolaPage() {
     setFetchError(null);
 
     try {
-      const res = await fetchEducations();
+      const [res, acts] = await Promise.all([
+        fetchEducations(),
+        fetchActivitiesWithPhotos(),
+      ]);
       if (res.success) {
         setArticles(res.data || []);
       } else {
         setFetchError(res.message || 'Gagal memuat artikel edukasi');
       }
+      setActivities(acts);
       setLastUpdated(new Date());
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat memuat data';
@@ -319,7 +349,102 @@ export default function EdukasiKelolaPage() {
     }
   };
 
-  // 9. Categories List
+  // 9b. Activity Documentation Handlers
+  const handleOpenActivityDetail = (act: ActivityDetail) => {
+    setSelectedActivity(act);
+    setIsActivityDetailModalOpen(true);
+  };
+
+  const handleOpenUploadPhoto = (activityId?: string) => {
+    setUploadActivityId(activityId || activities[0]?.id || 'ACT001');
+    setUploadPhotoFile(null);
+    setUploadPhotoPreview(null);
+    setUploadCaption('');
+    setUploadPhotographer(user?.name || 'Kader SATRIA');
+    setUploadPhotoError(null);
+    setIsUploadPhotoModalOpen(true);
+  };
+
+  const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validMimes.includes(file.type.toLowerCase())) {
+      setUploadPhotoError('Format file tidak didukung. Harap gunakan format JPG, JPEG, PNG, atau WEBP.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadPhotoError('Ukuran file foto maksimal 5 MB.');
+      return;
+    }
+
+    setUploadPhotoError(null);
+    setUploadPhotoFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setUploadPhotoPreview(previewUrl);
+  };
+
+  const handleSubmitPhoto = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadPhotoFile) {
+      setUploadPhotoError('Pilih file foto kegiatan terlebih dahulu.');
+      return;
+    }
+
+    setIsSubmittingPhoto(true);
+    setUploadPhotoError(null);
+
+    try {
+      const res = await saveActivityPhoto({
+        activityId: uploadActivityId,
+        file: uploadPhotoFile,
+        caption: uploadCaption,
+        photographer: uploadPhotographer,
+      });
+
+      if (res.success && res.data) {
+        setToast({
+          message: 'Foto dokumentasi kegiatan berhasil disimpan dan terhubung.',
+          type: 'success',
+        });
+        setIsUploadPhotoModalOpen(false);
+        setUploadPhotoFile(null);
+        setUploadPhotoPreview(null);
+        setUploadCaption('');
+
+        // Refresh activities
+        const updatedActs = await fetchActivitiesWithPhotos();
+        setActivities(updatedActs);
+        if (selectedActivity && selectedActivity.id === uploadActivityId) {
+          const updatedSelected = updatedActs.find(a => a.id === uploadActivityId);
+          if (updatedSelected) setSelectedActivity(updatedSelected);
+        }
+      } else {
+        setUploadPhotoError(res.message || 'Gagal mengunggah foto kegiatan.');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan sistem saat menyimpan foto.';
+      setUploadPhotoError(msg);
+    } finally {
+      setIsSubmittingPhoto(false);
+    }
+  };
+
+  const handleDeletePhoto = async (photoId: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus foto dokumentasi ini?')) return;
+    await deleteActivityPhoto(photoId);
+    setToast({ message: 'Foto dokumentasi berhasil dihapus.', type: 'info' });
+    const updatedActs = await fetchActivitiesWithPhotos();
+    setActivities(updatedActs);
+    if (selectedActivity) {
+      const updatedSelected = updatedActs.find(a => a.id === selectedActivity.id);
+      if (updatedSelected) setSelectedActivity(updatedSelected);
+    }
+  };
+
+  // 9c. Categories List
   const categoriesList = useMemo(() => {
     const set = new Set<string>();
     articles.forEach(a => {
@@ -720,14 +845,8 @@ export default function EdukasiKelolaPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              setToast({
-                message:
-                  'Penyimpanan berkas foto kegiatan terhubung ke Google Drive folder SANTARA_ARTICLE_IMAGES.',
-                type: 'info',
-              });
-            }}
-            className="flex items-center gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            onClick={() => handleOpenUploadPhoto()}
+            className="flex items-center gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold"
           >
             <Camera className="w-4 h-4" />
             <span>Unggah Foto Kegiatan</span>
@@ -735,27 +854,75 @@ export default function EdukasiKelolaPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {OFFICIAL_PROGRAM_ACTIVITIES.map((act) => (
-            <Card key={act.id} className="p-4 border border-slate-200 bg-white hover:border-emerald-300 transition-all flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider">
-                    {act.category}
-                  </Badge>
-                  <span className="text-xs text-slate-400 flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {act.activityDate}
+          {activities.map((act) => {
+            const hasPhotos = act.photos && act.photos.length > 0;
+            const latestPhoto = hasPhotos ? act.photos[0] : null;
+
+            return (
+              <Card
+                key={act.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => handleOpenActivityDetail(act)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleOpenActivityDetail(act);
+                  }
+                }}
+                className="p-4 border border-slate-200 bg-white hover:border-emerald-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded-2xl overflow-hidden"
+              >
+                <div>
+                  {/* Thumbnail / Header Banner */}
+                  {latestPhoto ? (
+                    <div className="relative w-full h-36 rounded-xl overflow-hidden mb-3 bg-slate-100 border border-slate-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={latestPhoto.url}
+                        alt={act.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-slate-900/80 text-white text-[10px] font-bold backdrop-blur-xs">
+                        {act.photos.length} Foto
+                      </span>
+                    </div>
+                  ) : null}
+
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider">
+                        {act.category}
+                      </Badge>
+                      <span className="text-[10px] font-mono font-bold text-slate-400">
+                        {act.id}
+                      </span>
+                    </div>
+                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {act.activityDate}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900 line-clamp-2 group-hover:text-emerald-700 transition-colors">
+                    {act.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed line-clamp-2">
+                    {act.description}
+                  </p>
+                </div>
+
+                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                  <span className="flex items-center gap-1 truncate max-w-[170px]">
+                    <MapPin className="w-3 h-3 shrink-0 text-slate-400" />
+                    <span className="truncate">{act.location}</span>
+                  </span>
+                  <span className="text-emerald-600 font-bold group-hover:translate-x-0.5 transition-transform shrink-0 flex items-center gap-0.5">
+                    <span>Lihat Detail</span>
+                    <span className="text-xs">&rarr;</span>
                   </span>
                 </div>
-                <h3 className="text-sm font-bold text-slate-900 line-clamp-2">{act.title}</h3>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2">{act.description}</p>
-              </div>
-              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                <span>Lokasi: {act.location}</span>
-                <span className="text-emerald-600 font-semibold">Terdokumentasi</span>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       </section>
 
@@ -1032,6 +1199,329 @@ export default function EdukasiKelolaPage() {
           </div>
         )}
       </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: DETAIL DOKUMENTASI KEGIATAN PROGRAM SATRIA                         */}
+      {/* ========================================================================= */}
+      {selectedActivity && (
+        <Modal
+          isOpen={isActivityDetailModalOpen}
+          onClose={() => setIsActivityDetailModalOpen(false)}
+          title="Detail Dokumentasi Kegiatan SATRIA"
+          maxWidth="lg"
+        >
+          <div className="space-y-5 pt-2">
+            {/* Header info */}
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant="primary" className="text-xs uppercase font-bold">
+                    {selectedActivity.category}
+                  </Badge>
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600">
+                    {selectedActivity.id}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-500 flex items-center gap-1 font-medium">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                  <span>{selectedActivity.activityDate}</span>
+                </div>
+              </div>
+
+              <h3 className="text-lg font-bold text-slate-900 leading-snug">
+                {selectedActivity.title}
+              </h3>
+
+              <div className="flex items-center gap-1 text-xs text-slate-600 font-medium">
+                <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>Lokasi: {selectedActivity.location}</span>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Deskripsi Pelaksanaan Kegiatan:
+              </span>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed p-3.5 bg-white border border-slate-200 rounded-xl">
+                {selectedActivity.description}
+              </p>
+            </div>
+
+            {/* Photo Gallery Section */}
+            <div className="space-y-3 pt-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Camera className="w-4 h-4 text-emerald-600" />
+                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Galeri Foto Dokumentasi ({selectedActivity.photos.length})
+                  </span>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenUploadPhoto(selectedActivity.id)}
+                  className="text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50 h-auto py-1 px-2.5 font-bold"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  <span>Tambah Foto</span>
+                </Button>
+              </div>
+
+              {selectedActivity.photos.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {selectedActivity.photos.map((photo) => (
+                    <div
+                      key={photo.id}
+                      className="group relative rounded-xl border border-slate-200 bg-white overflow-hidden hover:border-emerald-400 hover:shadow-md transition-all flex flex-col justify-between"
+                    >
+                      <div
+                        className="relative w-full h-44 bg-slate-100 cursor-pointer overflow-hidden"
+                        onClick={() => setViewingPhoto(photo)}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={photo.url}
+                          alt={photo.caption || selectedActivity.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                          <Eye className="w-6 h-6 drop-shadow-md" />
+                        </div>
+                      </div>
+
+                      <div className="p-3 flex flex-col gap-1.5">
+                        <p className="text-xs font-medium text-slate-800 line-clamp-2">
+                          {photo.caption || 'Dokumentasi kegiatan resmi SATRIA'}
+                        </p>
+                        <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-100">
+                          <span>Oleh: {photo.photographer || 'Kader'}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePhoto(photo.id);
+                            }}
+                            className="text-rose-500 hover:text-rose-700 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Hapus</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center flex flex-col items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                    <ImageIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-700">
+                      Belum ada dokumentasi foto untuk kegiatan ini.
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Unggah foto dokumentasi kegiatan untuk melengkapi log program SATRIA.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenUploadPhoto(selectedActivity.id)}
+                    className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 text-xs font-bold"
+                  >
+                    <Upload className="w-3.5 h-3.5 mr-1" />
+                    <span>Unggah Foto Sekarang</span>
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleOpenUploadPhoto(selectedActivity.id)}
+                className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold"
+              >
+                <Camera className="w-3.5 h-3.5 mr-1.5" />
+                <span>Unggah Foto Kegiatan</span>
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsActivityDetailModalOpen(false)}
+              >
+                Tutup
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: UNGGAH FOTO DOKUMENTASI KEGIATAN                                   */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={isUploadPhotoModalOpen}
+        onClose={() => !isSubmittingPhoto && setIsUploadPhotoModalOpen(false)}
+        title="Unggah Foto Dokumentasi Kegiatan"
+        description="Pilih kegiatan dan berkas foto dokumentasi untuk ditautkan pada log program SATRIA."
+        maxWidth="md"
+      >
+        <form onSubmit={handleSubmitPhoto} className="space-y-4 pt-2">
+          {uploadPhotoError && (
+            <Alert variant="error" title="Gagal Menyimpan Foto">
+              {uploadPhotoError}
+            </Alert>
+          )}
+
+          {/* Activity Target Select */}
+          <Select
+            label="Pilih Kegiatan Program SATRIA"
+            name="upload_activity_id"
+            value={uploadActivityId}
+            onChange={(e) => setUploadActivityId(e.target.value)}
+            options={activities.map((a) => ({
+              label: `${a.id} • ${a.title}`,
+              value: a.id,
+            }))}
+            required
+          />
+
+          {/* File Picker & Preview */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-700">
+              File Foto Kegiatan (JPG, JPEG, PNG, WEBP — Maks. 5MB) *
+            </label>
+
+            {uploadPhotoPreview ? (
+              <div className="relative w-full h-48 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={uploadPhotoPreview}
+                  alt="Preview Unggahan"
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadPhotoFile(null);
+                    setUploadPhotoPreview(null);
+                  }}
+                  className="absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/70 text-white hover:bg-rose-600 transition-colors shadow-sm"
+                  title="Ganti Foto"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="relative border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-emerald-400 transition-colors bg-slate-50/60">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={handlePhotoFileChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <div className="flex flex-col items-center gap-2 pointer-events-none">
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                    <Camera className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-700 block">
+                      Klik untuk memilih foto dokumentasi
+                    </span>
+                    <span className="text-[11px] text-slate-400 mt-0.5 block">
+                      Mendukung format gambar hingga 5 MB
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Caption */}
+          <Input
+            label="Keterangan / Caption Foto (Opsional)"
+            name="upload_caption"
+            placeholder="Contoh: Sesi praktik pengukuran antropometri kader UKS"
+            value={uploadCaption}
+            onChange={(e) => setUploadCaption(e.target.value)}
+          />
+
+          {/* Photographer Name */}
+          <Input
+            label="Nama Pengambil Foto / Tim Dokumentasi"
+            name="upload_photographer"
+            placeholder="Contoh: Kader SATRIA / Tim UKS"
+            value={uploadPhotographer}
+            onChange={(e) => setUploadPhotographer(e.target.value)}
+          />
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isSubmittingPhoto}
+              onClick={() => setIsUploadPhotoModalOpen(false)}
+            >
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={isSubmittingPhoto}
+              className="bg-emerald-600 hover:bg-emerald-700 font-bold text-white shadow-sm"
+            >
+              {isSubmittingPhoto ? 'Menyimpan Foto...' : 'Simpan Foto Kegiatan'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: PRATINJAU FOTO KEGIATAN (LIGHTBOX)                                */}
+      {/* ========================================================================= */}
+      {viewingPhoto && (
+        <Modal
+          isOpen={!!viewingPhoto}
+          onClose={() => setViewingPhoto(null)}
+          title="Pratinjau Foto Dokumentasi"
+          maxWidth="lg"
+        >
+          <div className="space-y-3 pt-1">
+            <div className="relative w-full max-h-[70vh] rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={viewingPhoto.url}
+                alt={viewingPhoto.caption || 'Dokumentasi'}
+                className="max-w-full max-h-[70vh] object-contain"
+              />
+            </div>
+            {viewingPhoto.caption && (
+              <p className="text-xs sm:text-sm text-slate-700 italic text-center p-2 bg-slate-50 rounded-xl">
+                &ldquo;{viewingPhoto.caption}&rdquo;
+              </p>
+            )}
+            <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
+              <span>Dokumentasi: {viewingPhoto.photographer || 'Kader SATRIA'}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setViewingPhoto(null)}
+              >
+                Tutup
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
