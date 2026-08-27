@@ -14,6 +14,7 @@ import {
 } from '@/components/ui';
 import { fetchExaminations, fetchClasses, fetchTTD, createClass } from '@/lib/api';
 import { filterValidClasses, normalizeString, normalizeBoolean } from '@/lib/adapters';
+import { formatGradeToRoman, formatClassNameToRoman } from '@/lib/normalizers/dataNormalizer';
 import { normalizeNutritionStatus, NUTRITION_STYLES, NutritionCategoryStyle } from '@/lib/utils/nutrition';
 import { calculatePercentage } from '@/lib/utils/number';
 import { useSession } from '@/context/SessionContext';
@@ -157,23 +158,30 @@ export default function ProtectedGrafikPage() {
           // Map class ID to grade level and class name
           const classGradeMap = new Map<string, string>();
           const classNameMap = new Map<string, string>();
-          const detectedGrades = new Set<string>(['10', '11', '12']); // Guarantee standard 10, 11, 12
+          const detectedGrades = new Set<string>(['10', '11', '12']); // Guarantee standard SMA grades: 10, 11, 12
 
           validClasses.forEach(c => {
             const classId = normalizeString(c?.id);
             if (classId) {
               const rawClassName = normalizeString(c.class_name);
               const rawGrade = normalizeString(c.grade);
-              const gr = rawGrade || (/(\d+)/.exec(rawClassName)?.[1] || '10');
-              const finalName = rawClassName || `Kelas ${gr}`;
+              let gr = rawGrade;
+              if (!gr) {
+                if (/XII|12/i.test(rawClassName)) gr = '12';
+                else if (/XI|11/i.test(rawClassName)) gr = '11';
+                else gr = '10';
+              }
+              const finalName = formatClassNameToRoman(rawClassName, gr);
 
               classGradeMap.set(classId, gr);
               classNameMap.set(classId, finalName);
-              detectedGrades.add(gr);
+              if (gr === '10' || gr === '11' || gr === '12') {
+                detectedGrades.add(gr);
+              }
             }
           });
 
-          // Sort available grades dynamically (10, 11, 12, 13, ...)
+          // Sort available grades dynamically (10 -> X, 11 -> XI, 12 -> XII)
           const sortedGrades = Array.from(detectedGrades).sort((a, b) => Number(a) - Number(b));
           setAvailableGrades(sortedGrades);
 
@@ -238,7 +246,8 @@ export default function ProtectedGrafikPage() {
 
           const builtGradeAggregates: Record<string, GradeNutritionAggregate> = {};
           sortedGrades.forEach(g => {
-            builtGradeAggregates[g] = makeAggregate(`Kelas ${g}`, g, byGrade[g] || { severelyThinness: 0, thinness: 0, normal: 0, overweight: 0, obese: 0, total: 0 });
+            const roman = formatGradeToRoman(g);
+            builtGradeAggregates[g] = makeAggregate(`Kelas ${roman}`, g, byGrade[g] || { severelyThinness: 0, thinness: 0, normal: 0, overweight: 0, obese: 0, total: 0 });
           });
           setGradeAggregates(builtGradeAggregates);
 
@@ -271,7 +280,7 @@ export default function ProtectedGrafikPage() {
             const classId = normalizeString(c.id);
             const data = ttdByClass[classId] || { totalLogged: 0, consumedCount: 0 };
             const gr = normalizeString(c.grade) || (/(\d+)/.exec(normalizeString(c.class_name))?.[1] || '10');
-            const name = normalizeString(c.class_name) || `Kelas ${gr}`;
+            const name = formatClassNameToRoman(c.class_name, gr);
             return {
               classId,
               className: name,
@@ -500,7 +509,7 @@ export default function ProtectedGrafikPage() {
             <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-100 rounded-2xl w-fit max-w-full border border-slate-200/80">
               {[
                 { id: 'ALL', label: 'Semua Tingkat (Gabungan)' },
-                ...availableGrades.map(g => ({ id: g, label: `Kelas ${g}` })),
+                ...availableGrades.map(g => ({ id: g, label: `Kelas ${formatGradeToRoman(g)}` })),
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -748,7 +757,7 @@ export default function ProtectedGrafikPage() {
                     Tabel Perbandingan Status Gizi Antar Tingkat Kelas (Standar WHO)
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Agregasi lengkap perbandingan tingkat Kelas 10, 11, 12, dan tingkat kelas lainnya
+                    Agregasi lengkap perbandingan tingkat Kelas X, XI, dan XII
                   </p>
                 </div>
               </div>
@@ -1029,11 +1038,9 @@ export default function ProtectedGrafikPage() {
                   onChange={e => setNewGrade(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
                 >
-                  <option value="10">Tingkat 10 (Kelas 10)</option>
-                  <option value="11">Tingkat 11 (Kelas 11)</option>
-                  <option value="12">Tingkat 12 (Kelas 12)</option>
-                  <option value="13">Tingkat 13 (Kelas 13)</option>
-                  <option value="14">Tingkat 14 (Kelas 14)</option>
+                  <option value="10">Kelas X (Tingkat 10)</option>
+                  <option value="11">Kelas XI (Tingkat 11)</option>
+                  <option value="12">Kelas XII (Tingkat 12)</option>
                 </select>
               </div>
 

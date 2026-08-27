@@ -38,20 +38,26 @@ async function resolveAndGenerateStudentCode(
       }).then(r => r.json()).catch(() => null),
     ]);
 
-    let grade = '10';
+    let romanGrade = 'X';
     if (classesRes?.success && Array.isArray(classesRes.data)) {
       const cls = classesRes.data.find((c: { id?: unknown; grade?: unknown; class_name?: unknown }) => 
         String(c?.id || '').trim() === cleanClassId
       );
       if (cls) {
-        const grStr = String(cls.grade || '').trim();
-        const nameStr = String(cls.class_name || '').trim();
-        const match = grStr.match(/\d+/) || nameStr.match(/\d+/);
-        if (match) grade = match[0];
+        const grStr = String(cls.grade || '').trim().toUpperCase();
+        const nameStr = String(cls.class_name || '').trim().toUpperCase();
+        if (grStr === '12' || grStr === 'XII' || grStr.includes('12') || grStr.includes('XII') || nameStr.includes('XII') || nameStr.includes('12')) {
+          romanGrade = 'XII';
+        } else if (grStr === '11' || grStr === 'XI' || grStr.includes('11') || grStr.includes('XI') || nameStr.includes('XI') || nameStr.includes('11')) {
+          romanGrade = 'XI';
+        } else {
+          romanGrade = 'X';
+        }
       }
     }
 
-    const prefix = `${grade}_`;
+    const prefix = `${romanGrade}_`;
+    const legacyNumericPrefix = romanGrade === 'X' ? '10_' : romanGrade === 'XI' ? '11_' : '12_';
     const usedLetters: string[] = [];
 
     if (studentsRes?.success && Array.isArray(studentsRes.data)) {
@@ -59,6 +65,9 @@ async function resolveAndGenerateStudentCode(
         const code = String(s?.student_code || '').trim().toUpperCase();
         if (code.startsWith(prefix.toUpperCase())) {
           const suffix = code.substring(prefix.length).trim();
+          if (suffix) usedLetters.push(suffix);
+        } else if (code.startsWith(legacyNumericPrefix.toUpperCase())) {
+          const suffix = code.substring(legacyNumericPrefix.length).trim();
           if (suffix) usedLetters.push(suffix);
         }
       });

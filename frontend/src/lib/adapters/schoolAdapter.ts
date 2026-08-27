@@ -5,7 +5,14 @@
  */
 
 import { School, ClassRoom, Student, StudentWithAge } from '@/types/models';
-import { normalizeString, normalizeClassRoom } from '@/lib/normalizers/dataNormalizer';
+import {
+  normalizeString,
+  normalizeClassRoom,
+  formatClassNameToRoman,
+  formatGradeToRoman,
+} from '@/lib/normalizers/dataNormalizer';
+
+export { formatClassNameToRoman, formatGradeToRoman };
 
 /**
  * Resolves student name safely from student ID and student list/map.
@@ -89,20 +96,7 @@ export function resolveClassName(classId?: unknown, classes: ClassRoom[] = []): 
     if (found) {
       const rawClassName = normalizeString(found.class_name);
       const rawGrade = normalizeString(found.grade);
-
-      if (rawClassName) {
-        if (rawClassName.toLowerCase().startsWith('kelas')) {
-          return rawClassName;
-        }
-        if (/^\d+$/.test(rawClassName)) {
-          return `Kelas ${rawClassName}`;
-        }
-        const gradePrefix = rawGrade ? `Kelas ${rawGrade} ` : 'Kelas ';
-        return `${gradePrefix}${rawClassName}`;
-      }
-      if (rawGrade) {
-        return `Kelas ${rawGrade}`;
-      }
+      return formatClassNameToRoman(rawClassName, rawGrade);
     }
   }
 

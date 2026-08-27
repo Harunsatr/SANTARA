@@ -64,6 +64,79 @@ export function normalizeBoolean(value: unknown, fallback: boolean = false): boo
 }
 
 /**
+ * Converts grade number or string to standard Roman numeral:
+ * 10 / "10" / "X" -> "X"
+ * 11 / "11" / "XI" -> "XI"
+ * 12 / "12" / "XII" -> "XII"
+ */
+export function formatGradeToRoman(gradeOrName?: unknown): 'X' | 'XI' | 'XII' | string {
+  const str = String(gradeOrName || '').trim().toUpperCase();
+  if (str === '10' || str === 'X' || str.startsWith('10') || str.startsWith('X') || str.includes('KELAS 10') || str.includes('KELAS X')) {
+    return 'X';
+  }
+  if (str === '11' || str === 'XI' || str.startsWith('11') || str.startsWith('XI') || str.includes('KELAS 11') || str.includes('KELAS XI')) {
+    return 'XI';
+  }
+  if (str === '12' || str === 'XII' || str.startsWith('12') || str.startsWith('XII') || str.includes('KELAS 12') || str.includes('KELAS XII')) {
+    return 'XII';
+  }
+  return str;
+}
+
+/**
+ * Formats full class name to standard user-friendly Roman display:
+ * - "Kelas 10", "10", "X", "Kelas X" -> "Kelas X"
+ * - "Kelas 11", "11", "XI", "Kelas XI" -> "Kelas XI"
+ * - "Kelas 12", "12", "XII", "Kelas XII" -> "Kelas XII"
+ * - "X-1", "10-1", "Kelas 10-1" -> "Kelas X-1"
+ * - "X-A", "10-A", "10 A" -> "Kelas X-A"
+ */
+export function formatClassNameToRoman(className?: unknown, grade?: unknown): string {
+  const rawName = String(className || '').trim();
+  const rawGrade = String(grade || '').trim();
+
+  // If already starts with "Kelas X", "Kelas XI", "Kelas XII"
+  if (/^Kelas\s+(XII|XI|X)(\b|[-_\s])/i.test(rawName)) {
+    return rawName.replace(/^Kelas\s+/i, 'Kelas ');
+  }
+
+  // Handle "Kelas 12", "Kelas 11", "Kelas 10"
+  if (/^Kelas\s+12(\b|[-_\s].*)?$/i.test(rawName)) {
+    return rawName.replace(/^Kelas\s+12/i, 'Kelas XII');
+  }
+  if (/^Kelas\s+11(\b|[-_\s].*)?$/i.test(rawName)) {
+    return rawName.replace(/^Kelas\s+11/i, 'Kelas XI');
+  }
+  if (/^Kelas\s+10(\b|[-_\s].*)?$/i.test(rawName)) {
+    return rawName.replace(/^Kelas\s+10/i, 'Kelas X');
+  }
+
+  // Handle rombel without "Kelas" prefix, e.g. "10-1" -> "Kelas X-1", "11-A" -> "Kelas XI-A"
+  if (/^12([-_\s].*)?$/i.test(rawName)) {
+    return `Kelas ${rawName.replace(/^12/i, 'XII')}`;
+  }
+  if (/^11([-_\s].*)?$/i.test(rawName)) {
+    return `Kelas ${rawName.replace(/^11/i, 'XI')}`;
+  }
+  if (/^10([-_\s].*)?$/i.test(rawName)) {
+    return `Kelas ${rawName.replace(/^10/i, 'X')}`;
+  }
+
+  // Handle "X", "XI", "XII", "X-1", "XI-2"
+  if (/^(XII|XI|X)([-_\s].*)?$/i.test(rawName)) {
+    return `Kelas ${rawName.toUpperCase()}`;
+  }
+
+  // If rawName is general text (e.g. "MIPA 1"), use grade
+  if (rawGrade) {
+    const roman = formatGradeToRoman(rawGrade);
+    return rawName ? `Kelas ${roman} ${rawName}` : `Kelas ${roman}`;
+  }
+
+  return rawName ? `Kelas ${rawName}` : 'Kelas X';
+}
+
+/**
  * Normalizes a raw ClassRoom entity from Google Sheets 03_CLASSES
  */
 export function normalizeClassRoom(raw: unknown): ClassRoom {
@@ -71,7 +144,7 @@ export function normalizeClassRoom(raw: unknown): ClassRoom {
     return {
       id: '',
       school_id: 'SCH001',
-      class_name: '',
+      class_name: 'Kelas X',
       grade: '10',
       academic_year: '2026/2027',
       address: '',
@@ -83,22 +156,23 @@ export function normalizeClassRoom(raw: unknown): ClassRoom {
   const rec = raw as Record<string, unknown>;
   const id = normalizeString(rec.id);
   const gradeRaw = normalizeString(rec.grade);
-  let classNameRaw = normalizeString(rec.class_name);
+  const classNameRaw = normalizeString(rec.class_name);
 
-  // If class_name is empty or purely numeric (e.g. "10", "11"), ensure user-friendly format
-  if (!classNameRaw && gradeRaw) {
-    classNameRaw = `Kelas ${gradeRaw}`;
-  } else if (/^\d+$/.test(classNameRaw)) {
-    classNameRaw = `Kelas ${classNameRaw}`;
+  // Derive numeric grade if not explicitly provided (default '10' for SMA)
+  let derivedGrade = gradeRaw;
+  if (!derivedGrade) {
+    if (/XII|12/i.test(classNameRaw)) derivedGrade = '12';
+    else if (/XI|11/i.test(classNameRaw)) derivedGrade = '11';
+    else derivedGrade = '10';
   }
 
-  // Derive numeric grade if not explicitly provided
-  const derivedGrade = gradeRaw || (/(\d+)/.exec(classNameRaw)?.[1] || (classNameRaw ? '10' : ''));
+  // Format to standard Roman class name (e.g. "Kelas X", "Kelas XI", "Kelas XII")
+  const normalizedClassName = formatClassNameToRoman(classNameRaw, derivedGrade);
 
   return {
     id,
     school_id: normalizeString(rec.school_id, 'SCH001'),
-    class_name: classNameRaw,
+    class_name: normalizedClassName,
     grade: derivedGrade,
     academic_year: normalizeString(rec.academic_year, '2026/2027'),
     address: normalizeString(rec.address),

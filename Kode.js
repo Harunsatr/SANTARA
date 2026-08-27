@@ -331,20 +331,31 @@ function getStudents(params) {
  */
 function generateNextStudentCode(schoolId, classId) {
   const classRow = findRowById(SHEETS.CLASSES, classId);
-  let grade = "10";
+  let romanGrade = "X";
   if (classRow) {
     const { rowValues, headers } = classRow;
     const gradeIdx = headers.indexOf("grade");
     const nameIdx = headers.indexOf("class_name");
+    let rawGrade = "";
+    let rawName = "";
     if (gradeIdx !== -1 && rowValues[gradeIdx]) {
-      const match = String(rowValues[gradeIdx]).match(/\d+/);
-      if (match) grade = match[0];
-    } else if (nameIdx !== -1 && rowValues[nameIdx]) {
-      const match = String(rowValues[nameIdx]).match(/\d+/);
-      if (match) grade = match[0];
+      rawGrade = String(rowValues[gradeIdx]).trim().toUpperCase();
+    }
+    if (nameIdx !== -1 && rowValues[nameIdx]) {
+      rawName = String(rowValues[nameIdx]).trim().toUpperCase();
+    }
+
+    if (rawGrade === "12" || rawGrade === "XII" || rawGrade.includes("12") || rawGrade.includes("XII") || rawName.includes("XII") || rawName.includes("12")) {
+      romanGrade = "XII";
+    } else if (rawGrade === "11" || rawGrade === "XI" || rawGrade.includes("11") || rawGrade.includes("XI") || rawName.includes("XI") || rawName.includes("11")) {
+      romanGrade = "XI";
+    } else {
+      romanGrade = "X";
     }
   }
-  const prefix = grade + "_";
+
+  const prefix = romanGrade + "_";
+  const legacyPrefix = romanGrade === "X" ? "10_" : romanGrade === "XI" ? "11_" : "12_";
 
   const studentSheet = getSheet(SHEETS.STUDENTS);
   if (!studentSheet) return prefix + "A";
@@ -365,6 +376,11 @@ function generateNextStudentCode(schoolId, classId) {
     const code = String(values[r][codeIdx] || "").trim().toUpperCase();
     if (code.startsWith(prefix.toUpperCase())) {
       const suffix = code.substring(prefix.length).trim();
+      if (suffix) {
+        usedLetters.push(suffix);
+      }
+    } else if (code.startsWith(legacyPrefix.toUpperCase())) {
+      const suffix = code.substring(legacyPrefix.length).trim();
       if (suffix) {
         usedLetters.push(suffix);
       }
@@ -1524,10 +1540,51 @@ function createClass(data) {
   }
 
   const className = String(data.class_name || "").trim();
-  const rawGrade = String(data.grade || "").trim();
+  const rawGrade = String(data.grade || "").trim().toUpperCase();
 
   if (!className && !rawGrade) {
     return errorResponse("Nama atau tingkat kelas wajib diisi", "REQUIRED_FIELD", { field: "class_name" });
+  }
+
+  // Resolving numeric grade & Roman display
+  let numericGrade = 10;
+  let romanGrade = "X";
+
+  if (rawGrade === "12" || rawGrade === "XII" || rawGrade.includes("12") || rawGrade.includes("XII") || className.includes("XII") || className.includes("12")) {
+    numericGrade = 12;
+    romanGrade = "XII";
+  } else if (rawGrade === "11" || rawGrade === "XI" || rawGrade.includes("11") || rawGrade.includes("XI") || className.includes("XI") || className.includes("11")) {
+    numericGrade = 11;
+    romanGrade = "XI";
+  } else if (rawGrade === "10" || rawGrade === "X" || rawGrade.includes("10") || rawGrade.includes("X") || className.includes("X") || className.includes("10")) {
+    numericGrade = 10;
+    romanGrade = "X";
+  } else {
+    // Check if user entered invalid grade outside 10-12
+    const num = parseInt(rawGrade, 10);
+    if (!isNaN(num) && (num < 10 || num > 12)) {
+      return errorResponse("Tingkat kelas hanya mendukung X (10), XI (11), dan XII (12). Tingkat di luar jenjang SMA tidak didukung.", "INVALID_GRADE");
+    }
+    numericGrade = 10;
+    romanGrade = "X";
+  }
+
+  // Format canonical class name
+  let finalClassName = className;
+  if (!finalClassName) {
+    finalClassName = `Kelas ${romanGrade}`;
+  } else {
+    // Normalize "Kelas 10", "Kelas 11", "Kelas 12" to Roman
+    finalClassName = finalClassName
+      .replace(/^Kelas\s+12(\b|[-_\s].*)?$/i, `Kelas XII$1`)
+      .replace(/^Kelas\s+11(\b|[-_\s].*)?$/i, `Kelas XI$1`)
+      .replace(/^Kelas\s+10(\b|[-_\s].*)?$/i, `Kelas X$1`)
+      .replace(/^12([-_\s].*)?$/i, `Kelas XII$1`)
+      .replace(/^11([-_\s].*)?$/i, `Kelas XI$1`)
+      .replace(/^10([-_\s].*)?$/i, `Kelas X$1`);
+    if (/^(XII|XI|X)([-_\s].*)?$/i.test(finalClassName)) {
+      finalClassName = `Kelas ${finalClassName.toUpperCase()}`;
+    }
   }
 
   // Resolving school_id with fallback to SCH001
@@ -1535,15 +1592,6 @@ function createClass(data) {
   if (!recordExists(SHEETS.SCHOOLS, schoolId)) {
     schoolId = "SCH001";
   }
-
-  // Format grade number
-  let grade = rawGrade;
-  if (!grade) {
-    const match = className.match(/\d+/);
-    grade = match ? match[0] : "10";
-  }
-
-  const finalClassName = className || `Kelas ${grade}`;
 
   const sheet = getSheet(SHEETS.CLASSES);
   if (!sheet) {
@@ -1564,7 +1612,7 @@ function createClass(data) {
 
     if (rSchool === schoolId) {
       if (rName === finalClassName.toLowerCase()) return true;
-      if (gradeIndex !== -1 && rGrade === grade && rName === finalClassName.toLowerCase()) return true;
+      if (gradeIndex !== -1 && (rGrade === String(numericGrade) || rGrade === romanGrade) && rName === finalClassName.toLowerCase()) return true;
     }
     return false;
   });
@@ -1581,7 +1629,7 @@ function createClass(data) {
     school_id: schoolId,
     address: data.address ? String(data.address).trim() : "Jl. KH. Agus Salim No. 57, Sisir, Kecamatan Batu, Kota Batu, Jawa Timur 65314",
     academic_year: data.academic_year ? String(data.academic_year).trim() : "2026/2027",
-    grade: Number(grade) || grade,
+    grade: numericGrade,
     class_name: finalClassName,
     status: data.status ? String(data.status).trim() : "active",
     created_at: now
@@ -1598,7 +1646,7 @@ function createClass(data) {
     action: "CREATE",
     table_name: SHEETS.CLASSES,
     record_id: newId,
-    description: `Menambahkan kelas baru: ${finalClassName} (Grade ${grade})`
+    description: `Menambahkan kelas baru: ${finalClassName} (Grade ${numericGrade})`
   });
 
   return successResponse("Data kelas berhasil ditambahkan", newRecord);
@@ -1622,8 +1670,32 @@ function updateClass(data) {
   const currentObj = rowToObject(headers, rowValues);
 
   const updatedObj = Object.assign({}, currentObj);
-  if (data.class_name !== undefined) updatedObj.class_name = String(data.class_name).trim();
-  if (data.grade !== undefined) updatedObj.grade = Number(data.grade) || data.grade;
+  if (data.grade !== undefined) {
+    const rawGrade = String(data.grade).trim().toUpperCase();
+    if (rawGrade === "12" || rawGrade === "XII") updatedObj.grade = 12;
+    else if (rawGrade === "11" || rawGrade === "XI") updatedObj.grade = 11;
+    else if (rawGrade === "10" || rawGrade === "X") updatedObj.grade = 10;
+    else {
+      const num = parseInt(rawGrade, 10);
+      if (!isNaN(num) && (num < 10 || num > 12)) {
+        return errorResponse("Tingkat kelas hanya mendukung X (10), XI (11), dan XII (12).", "INVALID_GRADE");
+      }
+      updatedObj.grade = Number(data.grade) || data.grade;
+    }
+  }
+
+  if (data.class_name !== undefined) {
+    let finalClassName = String(data.class_name).trim();
+    finalClassName = finalClassName
+      .replace(/^Kelas\s+12(\b|[-_\s].*)?$/i, `Kelas XII$1`)
+      .replace(/^Kelas\s+11(\b|[-_\s].*)?$/i, `Kelas XI$1`)
+      .replace(/^Kelas\s+10(\b|[-_\s].*)?$/i, `Kelas X$1`)
+      .replace(/^12([-_\s].*)?$/i, `Kelas XII$1`)
+      .replace(/^11([-_\s].*)?$/i, `Kelas XI$1`)
+      .replace(/^10([-_\s].*)?$/i, `Kelas X$1`);
+    updatedObj.class_name = finalClassName;
+  }
+
   if (data.school_id !== undefined) updatedObj.school_id = String(data.school_id).trim();
   if (data.academic_year !== undefined) updatedObj.academic_year = String(data.academic_year).trim();
   if (data.address !== undefined) updatedObj.address = String(data.address).trim();
@@ -1677,9 +1749,9 @@ function syncDatabaseStructure() {
     const academicYear = "2026/2027";
 
     const classConfigs = {
-      "CLS001": { grade: 10, name: "Kelas 10" },
-      "CLS002": { grade: 11, name: "Kelas 11" },
-      "CLS003": { grade: 12, name: "Kelas 12" }
+      "CLS001": { grade: 10, name: "Kelas X" },
+      "CLS002": { grade: 11, name: "Kelas XI" },
+      "CLS003": { grade: 12, name: "Kelas XII" }
     };
 
     for (let r = 1; r < values.length; r++) {
@@ -1719,9 +1791,9 @@ function syncDatabaseStructure() {
       if (!studentId) continue;
 
       let targetClassId = "CLS001";
-      if (code.startsWith("11_") || code.startsWith("11-") || code.startsWith("11")) {
+      if (code.startsWith("11_") || code.startsWith("XI_") || code.startsWith("11-") || code.startsWith("XI-") || code.startsWith("11") || code.startsWith("XI")) {
         targetClassId = "CLS002";
-      } else if (code.startsWith("12_") || code.startsWith("12-") || code.startsWith("12")) {
+      } else if (code.startsWith("12_") || code.startsWith("XII_") || code.startsWith("12-") || code.startsWith("XII-") || code.startsWith("12") || code.startsWith("XII")) {
         targetClassId = "CLS003";
       } else {
         targetClassId = "CLS001";

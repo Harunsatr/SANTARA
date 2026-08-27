@@ -1166,20 +1166,19 @@ export default function StatusGiziPage() {
               onChange={e => setNewGrade(e.target.value)}
               className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
             >
-              <option value="10">Kelas 10</option>
-              <option value="11">Kelas 11</option>
-              <option value="12">Kelas 12</option>
-              <option value="13">Kelas 13 (SMK 4 Tahun / Khusus)</option>
+              <option value="10">Kelas X (Tingkat 10)</option>
+              <option value="11">Kelas XI (Tingkat 11)</option>
+              <option value="12">Kelas XII (Tingkat 12)</option>
             </select>
           </div>
 
           <Input
             label="Nama Kelas / Rombel"
             name="class_name"
-            placeholder="Contoh: Kelas 10, X-A, XI IPA 1"
+            placeholder="Contoh: Kelas X, X-A, XI IPA 1"
             value={newClassName}
             onChange={e => setNewClassName(e.target.value)}
-            helperText="Kosongkan untuk menggunakan nama default (misal: Kelas 10)."
+            helperText="Kosongkan untuk menggunakan nama default (misal: Kelas X)."
           />
 
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
